@@ -259,13 +259,22 @@ export default function TasksPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Space size={4} align="center">
             {task.status === 'waiting' && dragHandleRef && (
-              <span
-                ref={dragHandleRef}
-                {...dragListeners}
-                style={{ cursor: 'grab', color: '#bbb', lineHeight: 1, marginTop: 1 }}
-              >
-                <HolderOutlined />
-              </span>
+              <Tooltip title="拖拽排序" mouseEnterDelay={0.4}>
+                <span
+                  ref={dragHandleRef}
+                  {...dragListeners}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 2,
+                    cursor: 'grab', color: '#bc73ad',
+                    background: 'rgba(188,115,173,0.12)',
+                    border: '1px solid rgba(188,115,173,0.30)',
+                    borderRadius: 4, padding: '2px 6px',
+                    lineHeight: 1, marginRight: 2,
+                  }}
+                >
+                  <HolderOutlined style={{ fontSize: 12 }} />
+                </span>
+              </Tooltip>
             )}
             <Badge status={sc.color as any} />
             <Text strong style={{ fontSize: 13 }}>{task.name}</Text>
@@ -394,19 +403,31 @@ export default function TasksPage() {
                     style={{
                       width: 320, minWidth: 320, display: 'flex', flexDirection: 'column',
                       background: '#faf5f9', border: '1px solid #ecdbea',
-                      borderRadius: 8, padding: 12, flexShrink: 0, height: '100%',
+                      borderRadius: 8, flexShrink: 0, height: '100%', overflow: 'hidden',
                     }}
                   >
+                    {/* 流水线拖拽条：全宽可拖区域 */}
+                    <div
+                      ref={plHandleRef}
+                      {...plListeners}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        padding: '5px 0',
+                        background: 'rgba(188,115,173,0.12)',
+                        borderBottom: '1px dashed rgba(188,115,173,0.35)',
+                        cursor: 'grab', userSelect: 'none', flexShrink: 0,
+                      }}
+                    >
+                      <HolderOutlined style={{ fontSize: 13, color: '#bc73ad', opacity: 0.75 }} />
+                      <span style={{ fontSize: 11, color: '#bc73ad', opacity: 0.75, letterSpacing: 1 }}>拖拽移动</span>
+                      <HolderOutlined style={{ fontSize: 13, color: '#bc73ad', opacity: 0.75 }} />
+                    </div>
+
+                    {/* 内容区域 */}
+                    <div style={{ padding: 12, display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
                     {/* 列标题 */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                       <Space size={4}>
-                        <span
-                          ref={plHandleRef}
-                          {...plListeners}
-                          style={{ cursor: 'grab', color: '#bbb', lineHeight: 1 }}
-                        >
-                          <HolderOutlined />
-                        </span>
                         {renamingId === pipeline.id ? (
                           <Space.Compact size="small">
                             <Input
@@ -468,6 +489,7 @@ export default function TasksPage() {
                     >
                       新建任务
                     </Button>
+                    </div>{/* end 内容区域 */}
                   </div>
                 )}
               </SortableItem>

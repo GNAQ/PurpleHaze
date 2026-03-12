@@ -55,7 +55,7 @@ export default function TaskCreateModal({
   const [pathPickerFor, setPathPickerFor] = useState<'work_dir'>('work_dir')
   const [argPathPickerIndex, setArgPathPickerIndex] = useState<number | null>(null)
   const [gpuDialogOpen, setGpuDialogOpen] = useState(false)
-  // GPU 条件弹窗：存储表单已校验字段，等待抗卡条件确认后再提交
+  // GPU 条件弹窗：存储表单已校验字段，等待抢卡条件确认后再提交
   const [pendingValues, setPendingValues] = useState<any>(null)
 
   // 模板管理
@@ -191,7 +191,7 @@ export default function TaskCreateModal({
         return
       }
     }
-    // 展示抗卡条件弹窗作为提交前的第二步
+    // 展示抢卡条件弹窗作为提交前的第二步
     setPendingValues(values)
     setGpuDialogOpen(true)
   }

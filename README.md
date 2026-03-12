@@ -1,10 +1,18 @@
 # PurpleHaze
 
-> 基于 Web 的任务调度与计算资源管理工具，专为深度学习和数据科学领域设计。
+> Web-based task scheduling and machine resource management tool, designed for Deep Learning and bare-metal GPU server nodes. 
+> 基于 Web 的任务调度与计算资源管理工具，专为深度学习和 GPU 裸机集群设计。
 
-**简写**：`pph`  
-**前端**：PurpleHaze（React + Ant Design 5）  
-**后端**：Xxium（Python FastAPI + SQLite）
+---
+
+## IMPORTANT
+
+**此项目是一个 Vibe coding 项目。由 [GNAQ](https://github.com/GNAQ) 与他的 Claude Coding Agent 构想、构建、审阅与维护。**
+
+### TODOs
+
+- [] 修整 `README.md`
+- [] 完善 API/代码函数文档
 
 ---
 
@@ -13,9 +21,9 @@
 | 模块 | 状态 |
 |------|------|
 | 0. 基础功能（认证、设置、启动） | ✅ 已实现 |
-| 1. 本地/远程机器管理与资源监控 | ✅ 已实现 |
-| 2. 任务管理与资源调度 | 🔲 规划中 |
-| 3. 历史任务记录与分析 | 🔲 规划中 |
+| 1. 本地/远程机器管理与资源监控 | ✅ 已实现 - 🔂 迭代中 |
+| 2. 任务管理与资源调度 | ✅ 已实现 - 🔂 迭代中 |
+| 3. 历史任务记录与分析 | ✅ 已实现 - 🔂 迭代中 |
 
 ---
 
@@ -26,7 +34,7 @@
 - Paramiko（SSH 连接）, psutil + pynvml（资源监控）
 - passlib[bcrypt]（密码哈希）, python-jose（JWT）
 
-**前端（PurpleHaze）：**
+**前端（PurpleHaze/PPH）：**
 - React 18, TypeScript, Vite
 - Ant Design 5, Zustand, Axios
 
