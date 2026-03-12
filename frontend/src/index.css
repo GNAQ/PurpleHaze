@@ -1,0 +1,17 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  background: linear-gradient(150deg, #1c0f28 0%, #261644 40%, #1a1535 70%, #130f2a 100%);
+  background-attachment: fixed;
+}
+
+#root {
+  min-height: 100vh;
+}
