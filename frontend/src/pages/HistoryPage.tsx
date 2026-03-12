@@ -291,7 +291,7 @@ export default function HistoryPage() {
                   </Descriptions.Item>
                 )}
                 {record.gpu_condition && (
-                  <Descriptions.Item label="抗卡条件">
+                  <Descriptions.Item label="抢卡条件">
                     <Tag color="purple">
                       {record.gpu_condition.mode === 'force' ? '强制选卡' : '智能抢卡'}
                     </Tag>

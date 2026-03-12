@@ -6,7 +6,7 @@ import {
 import {
   ReloadOutlined, DisconnectOutlined, LinkOutlined,
   DeleteOutlined, EditOutlined, EllipsisOutlined,
-  DesktopOutlined, ThunderboltOutlined,
+  DesktopOutlined, ThunderboltOutlined, HolderOutlined,
 } from '@ant-design/icons'
 import type { Machine } from '../api/machines'
 import type { GpuInfo, ResourceSnapshot } from '../api/monitor'
@@ -21,6 +21,9 @@ interface Props {
   onEdit: (machine: Machine) => void
   onDeleted: (id: number) => void
   onConnectionChange: (id: number, connected: boolean) => void
+  /** dnd-kit activator ref 和 listeners，由父组件张入 */
+  dragHandleRef?: (el: HTMLElement | null) => void
+  dragListeners?: Record<string, any>
 }
 
 const fmtMB = (mb: number) => {
@@ -185,7 +188,7 @@ function GpuDetail({ gpu }: { gpu: GpuInfo }) {
   )
 }
 
-export default function MachineCard({ machine, onEdit, onDeleted, onConnectionChange }: Props) {
+export default function MachineCard({ machine, onEdit, onDeleted, onConnectionChange, dragHandleRef, dragListeners }: Props) {
   const [snapshot, setSnapshot] = useState<ResourceSnapshot | null>(null)
   const [connecting, setConnecting] = useState(false)
   const [editingInterval, setEditingInterval] = useState(false)
@@ -279,8 +282,31 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
         background: '#faf5f9',
         flex: 1,
       }}
-      styles={{ body: { padding: 16 } }}
+      styles={{ body: { padding: 0 } }}
     >
+      {/* 拖拽排序条 */}
+      {dragHandleRef && (
+        <Tooltip title="拖拽排序" mouseEnterDelay={0.6}>
+          <div
+            ref={dragHandleRef}
+            {...dragListeners}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '5px 0', borderRadius: '12px 12px 0 0',
+              background: 'rgba(188,115,173,0.10)',
+              borderBottom: '1px dashed rgba(188,115,173,0.30)',
+              cursor: 'grab',
+              userSelect: 'none',
+            }}
+          >
+            <HolderOutlined style={{ fontSize: 14, color: '#bc73ad', opacity: 0.7 }} />
+            <span style={{ fontSize: 11, color: '#bc73ad', opacity: 0.7, letterSpacing: 1 }}>拖拽移动</span>
+            <HolderOutlined style={{ fontSize: 14, color: '#bc73ad', opacity: 0.7 }} />
+          </div>
+        </Tooltip>
+      )}
+      {/* 内容区域 */}
+      <div style={{ padding: 16 }}>
       {/* ── 头部 ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <Space align="center">
@@ -412,6 +438,7 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
             />
           </Space>
         )}
+      </div>
       </div>
     </Card>
   )

@@ -43,7 +43,7 @@ interface Props {
   open: boolean
   onClose: () => void
   onOk: (condition: GpuCondition) => void
-  /** 跳过抗卡条件（无需抗卡），传入时底部显示「无需抗卡条件」按鈕 */
+  /** 跳过抢卡条件（无需抢卡），传入时底部显示「无需抢卡条件」按鈕 */
   onSkip?: () => void
   initialValue?: GpuCondition | null
   /** 机器上的 GPU 数量（用于选卡） */
