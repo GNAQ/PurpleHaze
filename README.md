@@ -1,5 +1,9 @@
 # PurpleHaze
 
+<p align="center">
+    <img src="assets/PPH-logo-round.png" width="120" alt="PurpleHaze logo" />
+</p>
+
 > Web-based task scheduling and machine resource management tool, designed for Deep Learning and bare-metal GPU server nodes. 
 > 基于 Web 的任务调度与计算资源管理工具，专为深度学习和 GPU 裸机集群设计。
 

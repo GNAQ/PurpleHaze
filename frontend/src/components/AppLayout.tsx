@@ -97,10 +97,11 @@ export default function AppLayout() {
               onClick={() => setMobileDrawerOpen(true)}
             />
           )}
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <circle cx="14" cy="14" r="14" fill="#bc73ad" />
-            <text x="14" y="19" textAnchor="middle" fontSize="14" fill="white" fontWeight="bold">P</text>
-          </svg>
+          <img
+            src="/assets/PPH-logo-round.png"
+            alt="PurpleHaze"
+            style={{ width: 28, height: 28 }}
+          />
           <Title level={4} style={{ color: '#f5edf4', margin: 0, lineHeight: 1 }}>
             PurpleHaze
           </Title>
