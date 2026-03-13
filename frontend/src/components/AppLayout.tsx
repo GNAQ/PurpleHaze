@@ -65,7 +65,7 @@ export default function AppLayout() {
         </Badge>
       ),
     },
-    { key: '/history', icon: <HistoryOutlined />, label: <span style={menuLabelStyle}>历史记录</span> },
+    { key: '/history', icon: <HistoryOutlined />, label: <span style={menuLabelStyle}>历史任务</span> },
     { key: '/settings', icon: <SettingOutlined />, label: <span style={menuLabelStyle}>设置</span> },
   ]
 
