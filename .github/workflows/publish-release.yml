@@ -11,84 +11,61 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Check if tag v0.1.1 already exists
-        id: check_tag
-        uses: actions/github-script@v7
+      - name: Check out repository
+        uses: actions/checkout@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            try {
-              await github.rest.git.getRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: 'tags/v0.1.1'
-              });
-              console.log('Tag v0.1.1 already exists, skipping.');
-              return 'exists';
-            } catch (e) {
-              if (e.status === 404) {
-                console.log('Tag v0.1.1 does not exist, will create.');
-                return 'missing';
-              }
-              throw e;
-            }
+          fetch-depth: 0
 
-      - name: Create tag v0.1.1 on main branch HEAD
-        if: steps.check_tag.outputs.result == '"missing"'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            // Get main branch HEAD
-            const mainRef = await github.rest.git.getRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: 'heads/main'
-            });
-            const sha = mainRef.data.object.sha;
-            console.log(`Creating tag v0.1.1 at main HEAD: ${sha}`);
+      - name: Check if release v0.1.1 already exists
+        id: check_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view v0.1.1 --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release v0.1.1 already exists, skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Release v0.1.1 does not exist, will create."
+          fi
 
-            await github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: 'refs/tags/v0.1.1',
-              sha: sha
-            });
+      - name: Write release notes file
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          cat > /tmp/release-notes.md << 'RELEASE_NOTES_EOF'
+          For information & usage: please see `README.md`
+
+          # Changelog
+
+          ## New Features
+          - **New GPU preemption condition**: Added "GB available memory" as a new GPU preemption strategy, enabling tasks to be dispatched based on available GPU memory in gigabytes.
+
+          ## Improvements
+          - **Boot scripts refactored**: Split the original boot script into two separate scripts:
+            - `start.sh`: Handles starting up the system (server + frontend).
+            - `setup.sh`: Handles initial setup (installing dependencies and configuring the database).
+          - **Pipeline UI enhancements**:
+            - Tasks in the pipeline are now sorted from top to bottom.
+            - Past tasks are now automatically hidden in the pipeline view.
+          - **Task template UX fix**: Partially fixed the task template interaction procedure.
+          - **UI rename**: The "历史记录" tab has been renamed to "历史任务" for clarity.
+
+          ## Assets
+          - Added project logo (`assets/PPH-logo-round.png`).
+
+          ## Documentation
+          - Updated `README.md` with new screenshots and usage information.
+          RELEASE_NOTES_EOF
+          sed -i 's/^          //' /tmp/release-notes.md
 
       - name: Create GitHub Release v0.1.1
-        if: steps.check_tag.outputs.result == '"missing"'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: 'v0.1.1',
-              name: 'v0.1.1 Release',
-              body: `For information & usage: please see \`README.md\`
-
-# Changelog
-
-## New Features
-- **New GPU preemption condition**: Added "GB available memory" as a new GPU preemption strategy, enabling tasks to be dispatched based on available GPU memory in gigabytes.
-
-## Improvements
-- **Boot scripts refactored**: Split the original boot script into two separate scripts:
-  - \`start.sh\`: Handles starting up the system (server + frontend).
-  - \`setup.sh\`: Handles initial setup (installing dependencies and configuring the database).
-- **Pipeline UI enhancements**:
-  - Tasks in the pipeline are now sorted from top to bottom.
-  - Past tasks are now automatically hidden in the pipeline view.
-- **Task template UX fix**: Partially fixed the task template interaction procedure.
-- **UI rename**: The "历史记录" tab has been renamed to "历史任务" for clarity.
-
-## Assets
-- Added project logo (\`assets/PPH-logo-round.png\`).
-
-## Documentation
-- Updated \`README.md\` with new screenshots and usage information.`,
-              draft: false,
-              prerelease: false
-            });
-            console.log('Release v0.1.1 created successfully.');
+        if: steps.check_release.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v0.1.1 \
+            --repo "${{ github.repository }}" \
+            --target main \
+            --title "v0.1.1 Release" \
+            --notes-file /tmp/release-notes.md
+          echo "Release v0.1.1 created successfully."
