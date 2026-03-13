@@ -1,6 +1,6 @@
 name: Publish Release v0.1.1
 
-"on":
+on:
   push:
     branches:
       - main
@@ -32,32 +32,31 @@ jobs:
 
       - name: Write release notes file
         if: steps.check_release.outputs.exists == 'false'
-        run: |
-          cat > /tmp/release-notes.md << 'RELEASE_NOTES_EOF'
-          For information & usage: please see `README.md`
+        env:
+          RELEASE_NOTES: |
+            For information & usage: please see `README.md`
 
-          # Changelog
+            # Changelog
 
-          ## New Features
-          - **New GPU preemption condition**: Added "GB available memory" as a new GPU preemption strategy, enabling tasks to be dispatched based on available GPU memory in gigabytes.
+            ## New Features
+            - **New GPU preemption condition**: Added "GB available memory" as a new GPU preemption strategy, enabling tasks to be dispatched based on available GPU memory in gigabytes.
 
-          ## Improvements
-          - **Boot scripts refactored**: Split the original boot script into two separate scripts:
-            - `start.sh`: Handles starting up the system (server + frontend).
-            - `setup.sh`: Handles initial setup (installing dependencies and configuring the database).
-          - **Pipeline UI enhancements**:
-            - Tasks in the pipeline are now sorted from top to bottom.
-            - Past tasks are now automatically hidden in the pipeline view.
-          - **Task template UX fix**: Partially fixed the task template interaction procedure.
-          - **UI rename**: The "历史记录" tab has been renamed to "历史任务" for clarity.
+            ## Improvements
+            - **Boot scripts refactored**: Split the original boot script into two separate scripts:
+              - `start.sh`: Handles starting up the system (server + frontend).
+              - `setup.sh`: Handles initial setup (installing dependencies and configuring the database).
+            - **Pipeline UI enhancements**:
+              - Tasks in the pipeline are now sorted from top to bottom.
+              - Past tasks are now automatically hidden in the pipeline view.
+            - **Task template UX fix**: Partially fixed the task template interaction procedure.
+            - **UI rename**: The "历史记录" tab has been renamed to "历史任务" for clarity.
 
-          ## Assets
-          - Added project logo (`assets/PPH-logo-round.png`).
+            ## Assets
+            - Added project logo (`assets/PPH-logo-round.png`).
 
-          ## Documentation
-          - Updated `README.md` with new screenshots and usage information.
-          RELEASE_NOTES_EOF
-          sed -i 's/^          //' /tmp/release-notes.md
+            ## Documentation
+            - Updated `README.md` with new screenshots and usage information.
+        run: printf '%s' "$RELEASE_NOTES" > /tmp/release-notes.md
 
       - name: Create GitHub Release v0.1.1
         if: steps.check_release.outputs.exists == 'false'
