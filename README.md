@@ -11,7 +11,7 @@
 
 ## IMPORTANT
 
-**此项目是一个 Vibe coding 项目。由 [GNAQ](https://github.com/GNAQ) 与他的 Claude Coding Agent 构想、构建、审阅与维护。**
+**此项目是一个 Vibe coding 项目。由 [GNAQ](https://github.com/GNAQ) 与他的 Coding Agents 构想、构建、审阅与维护。**
 
 ### TODOs
 

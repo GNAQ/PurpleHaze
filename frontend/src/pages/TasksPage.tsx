@@ -73,6 +73,7 @@ export default function TasksPage() {
   const [addingPipeline, setAddingPipeline] = useState(false)
   const [renamingId, setRenamingId] = useState<number | null>(null)
   const [renameName, setRenameName] = useState('')
+  const [archivedVisibleCount, setArchivedVisibleCount] = useState<Record<number, number>>({})
 
   // 日志查看 (T5/T6)
   const [logsTask, setLogsTask] = useState<Task | null>(null)
@@ -116,6 +117,29 @@ export default function TasksPage() {
     const timer = setInterval(() => load(true), 5000)
     return () => clearInterval(timer)
   }, [load])
+
+  useEffect(() => {
+    setArchivedVisibleCount((prev) => {
+      const next: Record<number, number> = {}
+      let changed = false
+      for (const p of pipelines) {
+        if (prev[p.id] != null) next[p.id] = prev[p.id]
+      }
+      if (Object.keys(next).length !== Object.keys(prev).length) changed = true
+      if (!changed) return prev
+      return next
+    })
+  }, [pipelines])
+
+  function loadMoreArchived(pipelineId: number, total: number) {
+    setArchivedVisibleCount((prev) => {
+      const current = prev[pipelineId] ?? 0
+      return {
+        ...prev,
+        [pipelineId]: Math.min(current + 10, total),
+      }
+    })
+  }
 
   // ── 流水线操作 ─────────────────────────────────────────────────────────────
 
@@ -460,35 +484,84 @@ export default function TasksPage() {
                       </Space>
                     </div>
 
-                    {/* 任务列表 */}
-                    <div style={{ flex: 1, overflowY: 'auto' }}>
-                      <SortableContext
-                        items={pipeline.tasks.filter((t) => t.status === 'waiting').map((t) => `tk-${t.id}`)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        {pipeline.tasks.length === 0 ? (
-                          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无任务" style={{ margin: '24px 0' }} />
-                        ) : (
-                          pipeline.tasks.map((task) =>
-                            task.status === 'waiting' ? (
-                              <SortableItem key={task.id} id={`tk-${task.id}`}>
-                                {(hRef, hListeners) => renderTaskCard(task, pipeline, hRef, hListeners)}
-                              </SortableItem>
-                            ) : (
-                              renderTaskCard(task, pipeline)
-                            ),
-                          )
-                        )}
-                      </SortableContext>
-                    </div>
-
                     {/* 新建任务 */}
                     <Button
-                      type="dashed" icon={<PlusOutlined />} style={{ marginTop: 8 }}
+                      type="dashed" icon={<PlusOutlined />} style={{ marginBottom: 8 }}
                       onClick={() => { setEditTask(null); setDefaultPipelineId(pipeline.id); setCreateModalOpen(true) }}
                     >
                       新建任务
                     </Button>
+
+                    {/* 任务列表：活跃任务 + 底部按需加载已结束任务 */}
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                      {(() => {
+                        const displayedTasks = [...pipeline.tasks].reverse()
+                        const activeTasks = displayedTasks.filter(
+                          (t) => t.status === 'waiting' || t.status === 'running'
+                        )
+                        const archivedTasks = displayedTasks.filter(
+                          (t) => t.status !== 'waiting' && t.status !== 'running'
+                        )
+                        const visibleArchived = archivedVisibleCount[pipeline.id] ?? 0
+                        const archivedToShow = archivedTasks.slice(0, visibleArchived)
+                        const hasMoreArchived = visibleArchived < archivedTasks.length
+
+                        return (
+                          <>
+                            <SortableContext
+                              items={activeTasks.filter((t) => t.status === 'waiting').map((t) => `tk-${t.id}`)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {activeTasks.length === 0 ? (
+                                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无等待中/运行中任务" style={{ margin: '24px 0' }} />
+                              ) : (
+                                activeTasks.map((task) =>
+                                  task.status === 'waiting' ? (
+                                    <SortableItem key={task.id} id={`tk-${task.id}`}>
+                                      {(hRef, hListeners) => renderTaskCard(task, pipeline, hRef, hListeners)}
+                                    </SortableItem>
+                                  ) : (
+                                    renderTaskCard(task, pipeline)
+                                  ),
+                                )
+                              )}
+                            </SortableContext>
+
+                            {archivedTasks.length > 0 && (
+                              <>
+                                <div
+                                  style={{
+                                    margin: '8px 0 6px',
+                                    paddingTop: 8,
+                                    borderTop: '1px dashed #dcc8dd',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                  }}
+                                >
+                                  <Text type="secondary" style={{ fontSize: 12 }}>
+                                    已结束任务 {visibleArchived}/{archivedTasks.length}
+                                  </Text>
+                                  <Button
+                                    size="small"
+                                    onClick={() => loadMoreArchived(pipeline.id, archivedTasks.length)}
+                                    disabled={!hasMoreArchived}
+                                  >
+                                    {visibleArchived === 0
+                                      ? '加载 10 条'
+                                      : hasMoreArchived
+                                        ? '再加载 10 条'
+                                        : '已全部加载'}
+                                  </Button>
+                                </div>
+
+                                {archivedToShow.map((task) => renderTaskCard(task, pipeline))}
+                              </>
+                            )}
+                          </>
+                        )
+                      })()}
+                    </div>
                     </div>{/* end 内容区域 */}
                   </div>
                 )}

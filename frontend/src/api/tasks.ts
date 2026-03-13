@@ -18,7 +18,7 @@ export interface TaskConfig {
 }
 
 export interface GpuConditionItem {
-  type: 'mem' | 'util' | 'power' | 'procs'
+  type: 'mem' | 'mem_gb' | 'util' | 'power' | 'procs'
   op: '>' | '<' | '>=' | '<='
   value: number
 }

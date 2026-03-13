@@ -15,6 +15,7 @@ const { Text } = Typography
 
 const CONDITION_TYPE_OPTIONS = [
   { label: '空闲显存 (MB)', value: 'mem' },
+  { label: '空闲显存 (GB)', value: 'mem_gb' },
   { label: 'GPU 利用率 (%)', value: 'util' },
   { label: '功耗占比 (%)', value: 'power' },
   { label: 'Python 进程数', value: 'procs' },
@@ -28,6 +29,7 @@ const OP_OPTIONS = [
 
 const EXPR_HELP = `可用变量：
   mem      - 空闲显存 MB
+  mem_gb   - 空闲显存 GB
   util     - GPU 利用率 %
   power    - 功耗占最大功耗 %
   procs    - GPU 上的 Python 进程数
@@ -37,7 +39,8 @@ const EXPR_HELP = `可用变量：
 支持运算符：>  <  >=  <=  ==  !=  and  or  not  ( )
 
 示例：mem > 8000 and util < 10
-示例：(mem > 4096 or power < 20) and procs < 2`
+示例：(mem > 4096 or power < 20) and procs < 2
+示例：mem_gb > 10 and util < 15`
 
 interface Props {
   open: boolean

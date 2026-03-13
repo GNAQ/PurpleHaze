@@ -10,11 +10,12 @@ GPU 抢卡条件评估器
 
 支持的简单条件 type:
   mem     - 空闲显存 MB (memory_total_mb - memory_used_mb)
+  mem_gb  - 空闲显存 GB (memory_total_mb - memory_used_mb) / 1024
   util    - GPU 利用率 %
   power   - 功耗占最大功耗 %
   procs   - GPU 上的 Python 进程数量
 
-支持的文本表达式变量：同上 (mem, util, power, procs, used_mem, total_mem)
+支持的文本表达式变量：同上 (mem, mem_gb, util, power, procs, used_mem, total_mem)
 运算符：>  <  >=  <=  ==  !=  and  or  not  ( )
 """
 import ast
@@ -47,6 +48,7 @@ def _get_gpu_metrics(gpu: GpuInfo) -> dict:
 
     return {
         "mem": free_mem,
+        "mem_gb": free_mem / 1024.0,
         "util": gpu.utilization or 0.0,
         "power": power_pct,
         "procs": float(python_procs),
@@ -58,7 +60,7 @@ def _get_gpu_metrics(gpu: GpuInfo) -> dict:
 def _eval_simple_condition(cond: dict, metrics: dict) -> bool:
     """
     评估单个简单条件
-    cond: {type: "mem"|"util"|"power"|"procs", op: ">"|"<"|">="|"<=", value: float}
+    cond: {type: "mem"|"mem_gb"|"util"|"power"|"procs", op: ">"|"<"|">="|"<=", value: float}
     """
     ctype = cond.get("type", "")
     op = cond.get("op", "<")
@@ -89,7 +91,7 @@ _ALLOWED_AST_NODES = {
 def _eval_expr(expr: str, metrics: dict) -> bool:
     """
     评估文本条件表达式
-    允许变量：mem, util, power, procs, used_mem, total_mem
+    允许变量：mem, mem_gb, util, power, procs, used_mem, total_mem
     """
     if not expr.strip():
         return True
@@ -112,7 +114,7 @@ def _eval_expr(expr: str, metrics: dict) -> bool:
 
 def validate_expr(expr: str) -> str | None:
     """验证文本条件表达式语法，返回错误信息或 None（合法）"""
-    dummy = {"mem": 0.0, "util": 0.0, "power": 0.0, "procs": 0.0,
+    dummy = {"mem": 0.0, "mem_gb": 0.0, "util": 0.0, "power": 0.0, "procs": 0.0,
              "used_mem": 0.0, "total_mem": 0.0}
     try:
         _eval_expr(expr, dummy)

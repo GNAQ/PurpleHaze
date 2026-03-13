@@ -33,7 +33,7 @@ class TaskConfigSchema(BaseModel):
 
 
 # ── GPU 抢卡条件 ──────────────────────────────────────────────────────────────
-# condition item: {type: "mem"|"util"|"power"|"procs", op: ">"|"<"|">="|"<=", value: float}
+# condition item: {type: "mem"|"mem_gb"|"util"|"power"|"procs", op: ">"|"<"|">="|"<=", value: float}
 
 # ── 流水线 ───────────────────────────────────────────────────────────────────
 
