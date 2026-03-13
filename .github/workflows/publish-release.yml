@@ -1,9 +1,10 @@
 name: Publish Release v0.1.1
 
-on:
+"on":
   push:
     branches:
-      - 'copilot/publish-release-v0-1-1'
+      - main
+  workflow_dispatch:
 
 jobs:
   publish-release:
