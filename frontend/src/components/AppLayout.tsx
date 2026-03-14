@@ -75,7 +75,7 @@ export default function AppLayout() {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ height: '100vh', overflow: 'hidden' }}>
       <Header
         style={{
           display: 'flex',
@@ -116,7 +116,7 @@ export default function AppLayout() {
         </Button>
       </Header>
 
-      <Layout>
+      <Layout style={{ height: 'calc(100vh - 64px)' }}>
         <Sider
           width={180}
           breakpoint="md"
@@ -155,14 +155,16 @@ export default function AppLayout() {
           />
         </Drawer>
 
-        <Content style={{ padding: '24px', background: 'transparent', minHeight: 'calc(100vh - 64px)', overflow: 'auto' }}>
-          <Routes>
-            <Route path="/" element={<MachinesPage />} />
-            <Route path="/machines" element={<MachinesPage />} />
-            <Route path="/tasks" element={<TasksPage />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Routes>
+        <Content style={{ padding: '24px', background: 'transparent', height: '100%', overflow: 'hidden' }}>
+          <div style={{ height: '100%', overflow: 'hidden' }}>
+            <Routes>
+              <Route path="/" element={<MachinesPage />} />
+              <Route path="/machines" element={<MachinesPage />} />
+              <Route path="/tasks" element={<TasksPage />} />
+              <Route path="/history" element={<div style={{ height: '100%', overflowY: 'auto' }}><HistoryPage /></div>} />
+              <Route path="/settings" element={<div style={{ height: '100%', overflowY: 'auto' }}><SettingsPage /></div>} />
+            </Routes>
+          </div>
         </Content>
       </Layout>
     </Layout>

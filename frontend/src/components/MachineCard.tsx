@@ -13,6 +13,7 @@ import type { GpuInfo, ResourceSnapshot } from '../api/monitor'
 import { machinesApi } from '../api/machines'
 import { monitorApi } from '../api/monitor'
 import ResourceBar from './ResourceBar'
+import { ph } from '../theme/tokens'
 
 const { Text, Title } = Typography
 
@@ -42,7 +43,7 @@ function MiniBar({ value, color }: { value: number; color: string }) {
 }
 
 /** 根据利用率百分比返回状态色 */
-const utilColor = (pct: number) => pct > 85 ? '#e05363' : pct > 60 ? '#e8a838' : '#75c181'
+const utilColor = (pct: number) => pct > 85 ? ph.error : pct > 60 ? ph.warning : ph.green500
 
 /** GPU 总览格：显示 GPU#、利用率、显存、温度、功耗——核心扫一眼指标 */
 function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
@@ -53,15 +54,17 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
 
   return (
     <div style={{
-      background: '#f0e8f0', border: '1px solid #e0d0e0',
+      background: 'linear-gradient(135deg, rgba(232,245,234,0.96) 0%, rgba(245,237,244,0.96) 100%)',
+      border: '1px solid rgba(188,115,173,0.14)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.65)',
       borderRadius: 8, padding: '8px 10px',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#7a3b6e', letterSpacing: 0.5 }}>GPU {gpu.index}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#3d3542', letterSpacing: 0.5 }}>GPU {gpu.index}</span>
         {gpu.temperature_c != null && (
           <span style={{
             fontSize: 10, fontWeight: 600,
-            color: gpu.temperature_c > 80 ? '#e05363' : gpu.temperature_c > 65 ? '#e8a838' : '#4b7a52',
+            color: gpu.temperature_c > 80 ? ph.error : gpu.temperature_c > 65 ? ph.warning : '#2f6b3a',
             background: gpu.temperature_c > 80 ? '#fdecea' : gpu.temperature_c > 65 ? '#fef3e0' : '#edf7ef',
             borderRadius: 4, padding: '1px 5px',
           }}>
@@ -71,7 +74,7 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
       </div>
       <div style={{ marginBottom: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 10, color: '#9b7090' }}>利用率</span>
+          <span style={{ fontSize: 10, color: '#5a5261' }}>利用率</span>
           <span style={{ fontSize: 11, fontWeight: 600, color: utilColor(util), fontVariantNumeric: 'tabular-nums' }}>
             {util.toFixed(0)}%
           </span>
@@ -80,9 +83,9 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
       </div>
       <div style={{ marginTop: 5, marginBottom: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 10, color: '#9b7090' }}>显存</span>
-          <span style={{ fontSize: 10, color: '#6a4a6a', fontVariantNumeric: 'tabular-nums' }}>
-            {fmtMB(gpu.memory_used_mb)}<span style={{ color: '#b090a8' }}>/{fmtMB(gpu.memory_total_mb)}</span>
+          <span style={{ fontSize: 10, color: '#5a5261' }}>显存</span>
+          <span style={{ fontSize: 10, color: '#2d3a30', fontVariantNumeric: 'tabular-nums' }}>
+            {fmtMB(gpu.memory_used_mb)}<span style={{ color: '#657369' }}>/{fmtMB(gpu.memory_total_mb)}</span>
           </span>
         </div>
         <MiniBar value={vramPct} color={utilColor(vramPct)} />
@@ -90,8 +93,8 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
       {powerPct != null && (
         <div style={{ marginTop: 5 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 10, color: '#9b7090' }}>功耗</span>
-            <span style={{ fontSize: 10, color: '#7a6070', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontSize: 10, color: '#5a5261' }}>功耗</span>
+            <span style={{ fontSize: 10, color: '#2d3a30', fontVariantNumeric: 'tabular-nums' }}>
               {gpu.power_draw_w!.toFixed(0)}W
             </span>
           </div>
@@ -280,7 +283,6 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
         boxShadow: '0 4px 20px rgba(28,15,40,0.35)',
         border: connected ? '1px solid #c8e8cc' : '1px solid rgba(188,115,173,0.25)',
         background: '#faf5f9',
-        flex: 1,
       }}
       styles={{ body: { padding: 0 } }}
     >
@@ -308,28 +310,102 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
       {/* 内容区域 */}
       <div style={{ padding: 16 }}>
       {/* ── 头部 ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-        <Space align="center">
-          <DesktopOutlined style={{ fontSize: 18, color: '#bc73ad' }} />
-          <div>
-            <Title level={5} style={{ margin: 0, lineHeight: 1.3 }}>{machine.name}</Title>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {machine.is_local
-                ? 'localhost（本地）'
-                : `${machine.ssh_username}@${machine.ssh_host}:${machine.ssh_port}`}
-            </Text>
-            {!machine.is_local && machine.proxy_jump_host && (
-              <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>
-                via {machine.proxy_jump_username}@{machine.proxy_jump_host}:{machine.proxy_jump_port}
+      <div
+        style={{
+          marginBottom: 12,
+          paddingBottom: 12,
+          borderBottom: '1px solid #e7dfeb',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, rgba(188,115,173,0.18) 0%, rgba(221,184,213,0.30) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <DesktopOutlined style={{ fontSize: 18, color: '#a35595' }} />
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <Title level={5} style={{ margin: 0, lineHeight: 1.25, wordBreak: 'break-word' }}>{machine.name}</Title>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 2, wordBreak: 'break-all' }}>
+                {machine.is_local
+                  ? 'localhost（本地）'
+                  : `${machine.ssh_username}@${machine.ssh_host}:${machine.ssh_port}`}
               </Text>
+              {!machine.is_local && machine.proxy_jump_host && (
+                <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 2, wordBreak: 'break-all' }}>
+                  via {machine.proxy_jump_username}@{machine.proxy_jump_host}:{machine.proxy_jump_port}
+                </Text>
+              )}
+            </div>
+          </div>
+
+          <div style={{ flexShrink: 0 }}>
+            <Badge
+              status={connected ? 'success' : 'default'}
+              text={<Text style={{ fontSize: 12, fontWeight: 500 }}>{connected ? '已连接' : '未连接'}</Text>}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+          <div
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '4px 10px', borderRadius: 999,
+              background: 'rgba(188,115,173,0.08)',
+              border: '1px solid rgba(188,115,173,0.18)',
+              minHeight: 30,
+            }}
+          >
+            <Text type="secondary" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>轮询</Text>
+            {editingInterval ? (
+              <>
+                <InputNumber
+                  size="small" min={1} max={3600}
+                  value={intervalValue}
+                  onChange={(v) => v && setIntervalValue(v)}
+                  style={{ width: 72 }}
+                />
+                <Text type="secondary" style={{ fontSize: 11 }}>s</Text>
+                <Button size="small" type="link" onClick={saveInterval} style={{ padding: '0 2px', height: 20, fontSize: 12 }}>保存</Button>
+                <Button size="small" type="text" onClick={() => setEditingInterval(false)} style={{ padding: '0 2px', height: 20, fontSize: 12 }}>取消</Button>
+              </>
+            ) : (
+              <>
+                <Text style={{ fontSize: 11, fontWeight: 600 }}>{intervalValue}s</Text>
+                <Button
+                  type="text" size="small" icon={<EditOutlined />}
+                  onClick={() => setEditingInterval(true)}
+                  style={{ padding: 0, width: 18, height: 18, minWidth: 18 }}
+                />
+              </>
             )}
           </div>
-        </Space>
-        <Space>
-          <Badge
-            status={connected ? 'success' : 'default'}
-            text={<Text style={{ fontSize: 12 }}>{connected ? '已连接' : '未连接'}</Text>}
-          />
+
+          {!machine.is_local && (
+            connected ? (
+              <Button size="small" icon={<DisconnectOutlined />} onClick={handleDisconnect}>断开</Button>
+            ) : (
+              <Button size="small" type="primary" ghost icon={<LinkOutlined />} loading={connecting} onClick={handleConnect}>
+                连接
+              </Button>
+            )
+          )}
+
+          <Button size="small" icon={<ReloadOutlined />} onClick={fetchResources} disabled={!connected}>刷新</Button>
+
           <Dropdown
             menu={{
               items: menuItems,
@@ -342,22 +418,8 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
           >
             <Button type="text" icon={<EllipsisOutlined />} size="small" />
           </Dropdown>
-        </Space>
+        </div>
       </div>
-
-      {/* ── 连接控制 ── */}
-      {!machine.is_local && (
-        <Space style={{ marginBottom: 12 }}>
-          {connected ? (
-            <Button size="small" icon={<DisconnectOutlined />} onClick={handleDisconnect}>断开</Button>
-          ) : (
-            <Button size="small" type="primary" ghost icon={<LinkOutlined />} loading={connecting} onClick={handleConnect}>
-              连接
-            </Button>
-          )}
-          <Button size="small" icon={<ReloadOutlined />} onClick={fetchResources} disabled={!connected}>刷新</Button>
-        </Space>
-      )}
 
       {/* ── 资源区 ── */}
       {connected && snapshot && !snapshot.error ? (
@@ -413,32 +475,6 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
         <Text type="secondary" style={{ fontSize: 12 }}>正在获取资源信息...</Text>
       )}
 
-      {/* 轮询间隔 */}
-      <div style={{ borderTop: '1px solid #e0dce4', marginTop: 10, paddingTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Text type="secondary" style={{ fontSize: 11 }}>轮询间隔</Text>
-        {editingInterval ? (
-          <Space size={4}>
-            <InputNumber
-              size="small" min={1} max={3600}
-              value={intervalValue}
-              onChange={(v) => v && setIntervalValue(v)}
-              style={{ width: 64 }}
-            />
-            <Text type="secondary" style={{ fontSize: 11 }}>秒</Text>
-            <Button size="small" type="link" onClick={saveInterval} style={{ padding: '0 4px', height: 'auto', fontSize: 12 }}>保存</Button>
-            <Button size="small" type="text" onClick={() => setEditingInterval(false)} style={{ padding: '0 4px', height: 'auto', fontSize: 12 }}>取消</Button>
-          </Space>
-        ) : (
-          <Space size={4}>
-            <Text style={{ fontSize: 11 }}>{intervalValue}s</Text>
-            <Button
-              type="text" size="small" icon={<EditOutlined />}
-              onClick={() => setEditingInterval(true)}
-              style={{ padding: '0 2px', height: 18, lineHeight: '18px', fontSize: 11 }}
-            />
-          </Space>
-        )}
-      </div>
       </div>
     </Card>
   )
