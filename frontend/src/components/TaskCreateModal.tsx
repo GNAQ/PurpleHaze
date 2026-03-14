@@ -274,7 +274,8 @@ export default function TaskCreateModal({
         title={initialTask ? '编辑任务' : '创建任务'}
         open={open}
         onCancel={onClose}
-        width={980}
+        width="min(1320px, calc(100vw - 48px))"
+        styles={{ body: { maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' } }}
         footer={
           <Space>
             <Button onClick={onClose}>取消</Button>
@@ -290,108 +291,105 @@ export default function TaskCreateModal({
           </Space>
         }
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr)', gap: 14 }}>
-          <div style={{ borderRight: '1px solid #f0e6f5', paddingRight: 12 }}>
-            <Tabs
-              size="small"
-              tabPosition="left"
-              items={[
-                {
-                  key: 'templates',
-                  label: '任务预设',
-                  children: (
-                    <>
-                      <Input
-                        placeholder="模板名称"
-                        value={saveTemplateName}
-                        onChange={(e) => setSaveTemplateName(e.target.value)}
-                        onPressEnter={selectedTemplateId ? handleUpdateTemplate : handleSaveTemplate}
-                        style={{ marginBottom: 8 }}
-                      />
-                      <Space size={6} style={{ marginBottom: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div
+            style={{
+              border: '1px solid #f0e6f5',
+              borderRadius: 10,
+              padding: 12,
+              background: '#faf5ff',
+            }}
+          >
+            <Space direction="vertical" size={8} style={{ width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography.Text strong>任务预设</Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  点击行选中，点“加载”应用模板；“修改选中”会用下方当前字段覆盖模板。
+                </Typography.Text>
+              </div>
+
+              <Space wrap size={8} style={{ width: '100%' }}>
+                <Input
+                  placeholder="模板名称"
+                  value={saveTemplateName}
+                  onChange={(e) => setSaveTemplateName(e.target.value)}
+                  onPressEnter={selectedTemplateId ? handleUpdateTemplate : handleSaveTemplate}
+                  style={{ width: 300, maxWidth: '100%' }}
+                />
+                <Button
+                  size="small"
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  loading={savingTemplate}
+                  onClick={handleSaveTemplate}
+                  style={{ background: '#7c3aed' }}
+                >
+                  新建保存
+                </Button>
+                <Button
+                  size="small"
+                  loading={savingTemplate}
+                  onClick={handleUpdateTemplate}
+                  disabled={!selectedTemplateId}
+                >
+                  修改选中
+                </Button>
+              </Space>
+
+              <Table
+                size="small"
+                dataSource={templates}
+                rowKey="id"
+                pagination={{ pageSize: 6, hideOnSinglePage: true, size: 'small' }}
+                locale={{ emptyText: '暂无模板' }}
+                onRow={(tpl) => ({
+                  onClick: () => {
+                    setSelectedTemplateId(tpl.id)
+                    setSaveTemplateName(tpl.name)
+                  },
+                  style: {
+                    cursor: 'pointer',
+                    background: tpl.id === selectedTemplateId ? 'rgba(124,58,237,0.08)' : undefined,
+                  },
+                })}
+                columns={[
+                  {
+                    title: '名称',
+                    dataIndex: 'name',
+                    ellipsis: true,
+                    render: (name: string, tpl: TaskTemplate) => (
+                      <span style={{ fontWeight: tpl.id === selectedTemplateId ? 600 : 400 }}>{name}</span>
+                    ),
+                  },
+                  {
+                    title: '操作',
+                    width: 130,
+                    render: (_, tpl: TaskTemplate) => (
+                      <Space size={4}>
                         <Button
                           size="small"
-                          type="primary"
-                          icon={<SaveOutlined />}
-                          loading={savingTemplate}
-                          onClick={handleSaveTemplate}
-                          style={{ background: '#7c3aed' }}
+                          onClick={(e) => { e.stopPropagation(); loadFromTemplate(tpl) }}
                         >
-                          新建保存
+                          加载
                         </Button>
-                        <Button
-                          size="small"
-                          loading={savingTemplate}
-                          onClick={handleUpdateTemplate}
-                          disabled={!selectedTemplateId}
+                        <Popconfirm
+                          title="删除模板？"
+                          onConfirm={() => handleDeleteTemplate(tpl.id)}
                         >
-                          修改选中
-                        </Button>
+                          <Button
+                            size="small"
+                            danger
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            删除
+                          </Button>
+                        </Popconfirm>
                       </Space>
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        点击下方模板可选中；修改时会用右侧当前字段覆盖模板内容。
-                      </Typography.Text>
-
-                      <Divider style={{ margin: '10px 0' }} />
-
-                      <Table
-                        size="small"
-                        dataSource={templates}
-                        rowKey="id"
-                        pagination={false}
-                        locale={{ emptyText: '暂无模板' }}
-                        onRow={(tpl) => ({
-                          onClick: () => {
-                            setSelectedTemplateId(tpl.id)
-                            setSaveTemplateName(tpl.name)
-                          },
-                          style: {
-                            cursor: 'pointer',
-                            background: tpl.id === selectedTemplateId ? 'rgba(124,58,237,0.08)' : undefined,
-                          },
-                        })}
-                        columns={[
-                          {
-                            title: '名称',
-                            dataIndex: 'name',
-                            ellipsis: true,
-                            render: (name: string, tpl: TaskTemplate) => (
-                              <span style={{ fontWeight: tpl.id === selectedTemplateId ? 600 : 400 }}>{name}</span>
-                            ),
-                          },
-                          {
-                            title: '操作',
-                            width: 130,
-                            render: (_, tpl: TaskTemplate) => (
-                              <Space size={4}>
-                                <Button
-                                  size="small"
-                                  onClick={(e) => { e.stopPropagation(); loadFromTemplate(tpl) }}
-                                >
-                                  加载
-                                </Button>
-                                <Popconfirm
-                                  title="删除模板？"
-                                  onConfirm={() => handleDeleteTemplate(tpl.id)}
-                                >
-                                  <Button
-                                    size="small"
-                                    danger
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    删除
-                                  </Button>
-                                </Popconfirm>
-                              </Space>
-                            ),
-                          },
-                        ]}
-                      />
-                    </>
-                  ),
-                },
-              ]}
-            />
+                    ),
+                  },
+                ]}
+              />
+            </Space>
           </div>
 
           <Form form={form} layout="vertical">

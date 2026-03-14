@@ -17,9 +17,10 @@ from models.task import (
     Pipeline, Task, TaskStatus, TaskTemplate,
     GpuConditionPreset, CondaEnv,
 )
+from models.machine import Machine
 from schemas.task import (
     PipelineCreate, PipelineUpdate, PipelineResponse, TaskBrief,
-    TaskCreate, TaskUpdate,
+    TaskCreate, TaskUpdate, BatchTaskCreate, BatchTaskCreateResponse,
     TemplateCreate, TemplateUpdate, TemplateResponse,
     GpuPresetCreate, GpuPresetUpdate, GpuPresetResponse,
     CondaEnvCreate, CondaEnvUpdate, CondaEnvResponse,
@@ -131,6 +132,73 @@ async def create_task(data: TaskCreate, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(task)
     return TaskBrief.model_validate(task)
+
+
+@router.post("/batch", response_model=BatchTaskCreateResponse)
+async def create_batch_tasks(data: BatchTaskCreate, db: AsyncSession = Depends(get_db)):
+    machine_obj = await db.get(Machine, data.machine_id)
+    if machine_obj is None:
+        raise HTTPException(status_code=404, detail="运行机器不存在")
+
+    pipeline_ids = list(dict.fromkeys(data.pipeline_ids or []))
+    if pipeline_ids:
+        pipeline_result = await db.execute(
+            select(Pipeline.id).where(Pipeline.id.in_(pipeline_ids))
+        )
+        existing = set(pipeline_result.scalars().all())
+        missing = [pid for pid in pipeline_ids if pid not in existing]
+        if missing:
+            raise HTTPException(status_code=404, detail=f"流水线不存在: {', '.join(str(x) for x in missing)}")
+
+    commands = [cmd.strip() for cmd in data.commands if cmd and cmd.strip()]
+    if not commands:
+        raise HTTPException(status_code=400, detail="批量命令不能为空")
+
+    sort_cursor: dict[int | None, int] = {}
+
+    async def next_sort_order(pipeline_id: int | None) -> int:
+        if pipeline_id not in sort_cursor:
+            if pipeline_id is None:
+                result = await db.execute(
+                    select(Task).where(Task.pipeline_id.is_(None)).order_by(Task.sort_order.desc()).limit(1)
+                )
+            else:
+                result = await db.execute(
+                    select(Task).where(Task.pipeline_id == pipeline_id).order_by(Task.sort_order.desc()).limit(1)
+                )
+            last = result.scalar_one_or_none()
+            sort_cursor[pipeline_id] = (last.sort_order + 1) if last else 0
+        current = sort_cursor[pipeline_id]
+        sort_cursor[pipeline_id] = current + 1
+        return current
+
+    created_tasks: list[Task] = []
+    for idx, command in enumerate(commands):
+        pipeline_id = pipeline_ids[idx % len(pipeline_ids)] if pipeline_ids else None
+        config = data.config.model_dump()
+        config["command"] = command
+        config["args"] = []
+
+        task = Task(
+            name=f"批量任务 {idx + 1}",
+            pipeline_id=pipeline_id,
+            machine_id=data.machine_id,
+            config=config,
+            gpu_condition=data.gpu_condition,
+            sort_order=await next_sort_order(pipeline_id),
+            status=TaskStatus.WAITING,
+        )
+        db.add(task)
+        created_tasks.append(task)
+
+    await db.commit()
+    for task in created_tasks:
+        await db.refresh(task)
+
+    return BatchTaskCreateResponse(
+        created_count=len(created_tasks),
+        tasks=[TaskBrief.model_validate(t) for t in created_tasks],
+    )
 
 
 @router.put("/{task_id}", response_model=TaskBrief)

@@ -88,6 +88,27 @@ class TaskCreate(BaseModel):
     gpu_condition: dict | None = None
 
 
+class BatchTaskCreate(BaseModel):
+    pipeline_ids: list[int] = []
+    machine_id: int
+    config: TaskConfigSchema
+    gpu_condition: dict | None = None
+    commands: list[str]
+
+    @field_validator("commands")
+    @classmethod
+    def commands_not_empty(cls, values: list[str]) -> list[str]:
+        cleaned = [v.strip() for v in values if v and v.strip()]
+        if not cleaned:
+            raise ValueError("批量命令不能为空")
+        return cleaned
+
+
+class BatchTaskCreateResponse(BaseModel):
+    created_count: int
+    tasks: list[TaskBrief]
+
+
 class TaskUpdate(BaseModel):
     name: str | None = None
     pipeline_id: int | None = None

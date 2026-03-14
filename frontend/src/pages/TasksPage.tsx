@@ -5,7 +5,7 @@ import {
 } from 'antd'
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, StopOutlined, ReloadOutlined,
-  FileTextOutlined, HolderOutlined, LoadingOutlined,
+  FileTextOutlined, HolderOutlined, LoadingOutlined, UploadOutlined,
 } from '@ant-design/icons'
 import {
   DndContext, DragEndEvent, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter,
@@ -21,6 +21,7 @@ import 'dayjs/locale/zh-cn'
 import { machinesApi, Machine } from '../api/machines'
 import { tasksApi, Pipeline, Task, TaskStatus } from '../api/tasks'
 import TaskCreateModal from '../components/TaskCreateModal'
+import TaskBatchModal from '../components/TaskBatchModal'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
@@ -64,6 +65,7 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [batchModalOpen, setBatchModalOpen] = useState(false)
   const [editTask, setEditTask] = useState<Task | null>(null)
   const [defaultPipelineId, setDefaultPipelineId] = useState<number | null>(null)
 
@@ -395,7 +397,7 @@ export default function TasksPage() {
   return (
     <div style={{ height: 'calc(100vh - 112px)', display: 'flex', flexDirection: 'column' }}>
       {/* 顶部工具栏 */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <Space>
           <Title level={5} style={{ margin: 0 }}>任务队列</Title>
           <Tooltip title="刷新">
@@ -405,6 +407,14 @@ export default function TasksPage() {
             />
           </Tooltip>
         </Space>
+        <Button
+          type="primary"
+          icon={<UploadOutlined />}
+          style={{ background: '#7c3aed' }}
+          onClick={() => setBatchModalOpen(true)}
+        >
+          批量任务
+        </Button>
       </div>
 
       {/* 流水线看板 */}
@@ -635,6 +645,14 @@ export default function TasksPage() {
         machines={machines}
         initialTask={editTask}
         defaultPipelineId={editTask ? undefined : defaultPipelineId}
+      />
+
+      <TaskBatchModal
+        open={batchModalOpen}
+        onClose={() => setBatchModalOpen(false)}
+        onSuccess={() => load()}
+        pipelines={pipelines}
+        machines={machines}
       />
 
       {/* T5/T6: 日志弹窗 - Tabs + task name title */}

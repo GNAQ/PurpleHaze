@@ -1,0 +1,268 @@
+import { useEffect, useState } from 'react'
+import {
+  Modal, Form, Input, Select, Button, Space, Upload, Typography, message,
+} from 'antd'
+import {
+  UploadOutlined, ThunderboltOutlined, FolderOpenOutlined,
+} from '@ant-design/icons'
+import { Machine, machinesApi } from '../api/machines'
+import {
+  tasksApi, CondaEnv, GpuCondition, Pipeline,
+} from '../api/tasks'
+import GpuConditionDialog from './GpuConditionDialog'
+import PathPickerModal from './PathPickerModal'
+
+interface Props {
+  open: boolean
+  onClose: () => void
+  onSuccess: () => void
+  pipelines: Pipeline[]
+  machines: Machine[]
+}
+
+export default function TaskBatchModal({
+  open, onClose, onSuccess, pipelines, machines,
+}: Props) {
+  const [form] = Form.useForm()
+  const [submitting, setSubmitting] = useState(false)
+  const [condaEnvs, setCondaEnvs] = useState<CondaEnv[]>([])
+  const [commands, setCommands] = useState<string[]>([])
+  const [selectedMachineId, setSelectedMachineId] = useState<number | null>(null)
+  const [gpuCount, setGpuCount] = useState(0)
+  const [pathPickerOpen, setPathPickerOpen] = useState(false)
+  const [gpuDialogOpen, setGpuDialogOpen] = useState(false)
+  const [gpuCondition, setGpuCondition] = useState<GpuCondition | null>(null)
+  const [pendingValues, setPendingValues] = useState<any>(null)
+
+  useEffect(() => {
+    if (!open) return
+    form.resetFields()
+    setCommands([])
+    setSelectedMachineId(null)
+    setGpuCount(0)
+    setGpuCondition(null)
+    setPendingValues(null)
+    void loadCondaEnvs()
+  }, [open])
+
+  async function loadCondaEnvs() {
+    try {
+      setCondaEnvs((await tasksApi.listCondaEnvs()).data)
+    } catch {
+      setCondaEnvs([])
+    }
+  }
+
+  async function fetchGpuCount(machineId: number) {
+    try {
+      const res = await machinesApi.getSnapshot(machineId)
+      setGpuCount(res.data.gpus?.length ?? 0)
+    } catch {
+      setGpuCount(0)
+    }
+  }
+
+  function parseBatchText(text: string): string[] {
+    return text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith('#'))
+  }
+
+  async function handleChooseFile(file: File) {
+    try {
+      const raw = await file.text()
+      const parsed = parseBatchText(raw)
+      if (parsed.length === 0) {
+        message.warning('文件中没有可用命令（空行和 # 注释会自动忽略）')
+      } else {
+        message.success(`已加载 ${parsed.length} 条命令`)
+      }
+      setCommands(parsed)
+    } catch {
+      message.error('读取文件失败')
+    }
+    return false
+  }
+
+  async function handleSubmit() {
+    let values: any
+    try {
+      values = await form.validateFields()
+    } catch {
+      return
+    }
+
+    if (commands.length === 0) {
+      message.warning('请先上传 txt/csv 命令文件')
+      return
+    }
+
+    const machine = machines.find((m) => m.id === values.machine_id)
+    if (machine && !machine.is_local && !machine.connected) {
+      message.error(`远程机器 "${machine.name}" 未连接，请先连接后再提交`)
+      return
+    }
+
+    setPendingValues(values)
+    setGpuDialogOpen(true)
+  }
+
+  async function handleGpuDialogConfirm(condition: GpuCondition | null) {
+    setGpuDialogOpen(false)
+    const values = pendingValues
+    setPendingValues(null)
+    if (!values) return
+
+    setSubmitting(true)
+    try {
+      await tasksApi.createBatchTasks({
+        pipeline_ids: values.pipeline_ids,
+        machine_id: values.machine_id,
+        config: {
+          conda_env_id: values.conda_env_id || null,
+          env_vars: {},
+          work_dir: values.work_dir,
+          command: commands[0],
+          args: [],
+        },
+        gpu_condition: condition,
+        commands,
+      })
+      message.success(`批量提交成功，共 ${commands.length} 条任务`)
+      onClose()
+      onSuccess()
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '批量提交失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <>
+      <Modal
+        title="批量任务"
+        open={open}
+        onCancel={onClose}
+        width={760}
+        footer={(
+          <Space>
+            <Button onClick={onClose}>取消</Button>
+            <Button
+              type="primary"
+              loading={submitting}
+              onClick={handleSubmit}
+              icon={<ThunderboltOutlined />}
+              style={{ background: '#7c3aed' }}
+            >
+              批量加入队列
+            </Button>
+          </Space>
+        )}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="pipeline_ids"
+            label="目标流水线"
+            rules={[{ required: true, message: '请至少选择一个流水线' }]}
+          >
+            <Select
+              mode="multiple"
+              placeholder="选择一个或多个流水线（将按顺序均摊）"
+              options={pipelines.map((p) => ({ label: p.name, value: p.id }))}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="machine_id"
+            label="运行机器"
+            rules={[{ required: true, message: '请选择运行机器' }]}
+          >
+            <Select
+              placeholder="选择机器"
+              options={machines.map((m) => ({
+                label: m.is_local ? `${m.name} (本地)` : `${m.name} (${m.ssh_host})`,
+                value: m.id,
+              }))}
+              onChange={(v) => {
+                setSelectedMachineId(v)
+                if (v) fetchGpuCount(v)
+                else setGpuCount(0)
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item name="conda_env_id" label="Conda 环境">
+            <Select
+              placeholder="不使用 Conda 环境"
+              allowClear
+              options={condaEnvs.map((e) => ({ label: `${e.name} (${e.path})`, value: e.id }))}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="work_dir"
+            label="执行根目录"
+            rules={[{ required: true, message: '请填写执行根目录' }]}
+          >
+            <Space.Compact style={{ width: '100%' }}>
+              <Form.Item name="work_dir" noStyle>
+                <Input placeholder="/path/to/workdir" />
+              </Form.Item>
+              <Button
+                icon={<FolderOpenOutlined />}
+                onClick={() => setPathPickerOpen(true)}
+              >
+                浏览
+              </Button>
+            </Space.Compact>
+          </Form.Item>
+
+          <Form.Item label="批量命令文件（txt/csv）" required>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Upload
+                accept=".txt,.csv,text/plain,text/csv"
+                maxCount={1}
+                beforeUpload={handleChooseFile}
+                showUploadList={false}
+              >
+                <Button icon={<UploadOutlined />}>选择文件</Button>
+              </Upload>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                文件中每行一条命令；空行和以 # 开头的行会被忽略。
+              </Typography.Text>
+              <Input.TextArea
+                value={commands.join('\n')}
+                readOnly
+                rows={8}
+                placeholder="上传后这里会展示解析后的命令列表"
+              />
+              <Typography.Text type="secondary">共 {commands.length} 条命令</Typography.Text>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <PathPickerModal
+        open={pathPickerOpen}
+        onClose={() => setPathPickerOpen(false)}
+        machineId={selectedMachineId ?? undefined}
+        dirsOnly
+        onSelect={(path) => {
+          form.setFieldValue('work_dir', path)
+          setPathPickerOpen(false)
+        }}
+      />
+
+      <GpuConditionDialog
+        open={gpuDialogOpen}
+        onClose={() => { setGpuDialogOpen(false); setPendingValues(null) }}
+        onOk={(condition) => { setGpuCondition(condition); void handleGpuDialogConfirm(condition) }}
+        onSkip={() => { setGpuCondition(null); void handleGpuDialogConfirm(null) }}
+        initialValue={gpuCondition}
+        gpuCount={gpuCount > 0 ? gpuCount : 8}
+      />
+    </>
+  )
+}

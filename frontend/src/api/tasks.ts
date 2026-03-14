@@ -89,6 +89,19 @@ export interface TaskLogsResponse {
   truncated: boolean
 }
 
+export interface BatchTaskCreatePayload {
+  pipeline_ids: number[]
+  machine_id: number
+  config: TaskConfig
+  gpu_condition?: GpuCondition | null
+  commands: string[]
+}
+
+export interface BatchTaskCreateResponse {
+  created_count: number
+  tasks: Task[]
+}
+
 // ── 路径浏览 ──────────────────────────────────────────────────────────────────
 
 export interface FsItem {
@@ -122,6 +135,8 @@ export const tasksApi = {
     config?: TaskConfig | null
     gpu_condition?: GpuCondition | null
   }) => client.post<Task>('/tasks', data),
+  createBatchTasks: (data: BatchTaskCreatePayload) =>
+    client.post<BatchTaskCreateResponse>('/tasks/batch', data),
   updateTask: (id: number, data: {
     name?: string
     pipeline_id?: number | null
