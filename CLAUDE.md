@@ -79,7 +79,19 @@ cd frontend && npm run dev
 - **前端轮询 5 秒**：TasksPage 每 5s 全量拉取，没有 WebSocket，改了后端数据前端最多延迟 5s 可见
 - **sort_order 在前端反转显示**：DB 中 sort_order 小的任务（队列头）在前端显示在列表底部，见 `maintenance/frontend.md`
 
+## 迭代记录
+
+项目的迭代历史以 **git commit message** 为准，不另维护 CHANGELOG 文件。
+
+- 了解某个功能是什么时候、为什么加进来：`git log --oneline` 或 `git log --grep="关键词"`
+- 了解某个文件的变更历史：`git log --oneline -- path/to/file`
+- 了解某次改动的具体内容：`git show <hash>`
+
+在完成一个功能或修复后，commit message 应能独立说明"做了什么、为什么做"，是项目上下文的主要载体。
+
+---
+
 ## 参考文档
 
 - 架构与数据流：`maintenance/`
-- 功能需求：`dev_plan/`
+- 功能需求与实现状态：`dev_plan/`

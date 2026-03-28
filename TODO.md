@@ -20,7 +20,3 @@
 - `backend/services/task_scheduler.py`：核心调度逻辑，集成测试
 - 前端：用 Playwright 覆盖主要用户流程（任务创建、流水线操作）
 
-## 6. 迭代记录
-
-建立轻量的迭代记录，帮助 agent 在做功能演化决策时理解设计上下文。
-形式待定：`CHANGELOG.md` 或在 `dev_plan/` 里做版本标注均可。

@@ -14,10 +14,7 @@ build/
 pip-wheel-metadata/
 
 # ── 后端运行时数据 ─────────────────────────────────────────────────────────────
-backend/data/pph.db
-backend/data/pph.db-shm
-backend/data/pph.db-wal
-backend/data/task_logs/
+backend/data/
 
 # 前端构建产物（部署时复制到此处）
 backend/static/
