@@ -12,18 +12,19 @@ import 'dayjs/locale/zh-cn'
 import { tasksApi, Task, TaskStatus } from '../api/tasks'
 import { machinesApi, Machine } from '../api/machines'
 import TaskCreateModal from '../components/TaskCreateModal'
+import { ph } from '../theme/tokens'
 
 dayjs.locale('zh-cn')
 
 const { Text } = Typography
 const { Option } = Select
 
-const STATUS_CONFIG: Record<TaskStatus, { color: string; label: string }> = {
-  waiting:   { color: 'default',   label: '等待中' },
-  running:   { color: 'processing', label: '运行中' },
-  completed: { color: 'success',   label: '已完成' },
-  failed:    { color: 'error',     label: '失败' },
-  cancelled: { color: 'warning',   label: '已取消' },
+const STATUS_CONFIG: Record<TaskStatus, { color: string; label: string; pillClass: string }> = {
+  waiting:   { color: 'default',    label: '等待中', pillClass: 'ph-status-waiting' },
+  running:   { color: 'processing', label: '运行中', pillClass: 'ph-status-running' },
+  completed: { color: 'success',    label: '已完成', pillClass: 'ph-status-completed' },
+  failed:    { color: 'error',      label: '失败',   pillClass: 'ph-status-failed' },
+  cancelled: { color: 'warning',    label: '已取消', pillClass: 'ph-status-cancelled' },
 }
 
 const HISTORY_STATUSES: TaskStatus[] = ['completed', 'failed', 'cancelled']
@@ -47,13 +48,11 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true)
   const [machines, setMachines] = useState<Machine[]>([])
 
-  // 日志弹窗
   const [logsTaskId, setLogsTaskId] = useState<number | null>(null)
   const [logsContent, setLogsContent] = useState({ stdout: '', stderr: '', truncated: false })
   const [logsTab, setLogsTab] = useState<'stdout' | 'stderr'>('stdout')
   const [logsLoading, setLogsLoading] = useState(false)
 
-  // 重跑弹窗
   const [rerunTask, setRerunTask] = useState<Task | null>(null)
   const [rerunPipelines, setRerunPipelines] = useState<any[]>([])
 
@@ -115,19 +114,17 @@ export default function HistoryPage() {
     message.success('已重新提交任务')
   }
 
-  // 命令摘要
   function cmdSummary(task: Task): string {
     const c = task.config || {}
     const args = (c.args || []).map((a: any) => `${a.name} ${a.value}`).join(' ')
     return [c.command, args].filter(Boolean).join(' ') || '-'
   }
 
-  // 渲染单个参数值（路径类型带复制/打开）
   function renderArgValue(value: string, isLocal: boolean) {
     const isPath = value.startsWith('/') || value.startsWith('~') || value.startsWith('./')
     return (
       <Space size={2}>
-        <Text code style={{ fontSize: 11 }}>{value}</Text>
+        <Text className="ph-mono" style={{ fontSize: 11, color: ph.dark.textCode }}>{value}</Text>
         {isPath && (
           <Tooltip title="复制路径">
             <Button
@@ -159,35 +156,48 @@ export default function HistoryPage() {
   const columns: ColumnsType<Task> = [
     {
       title: '任务名', dataIndex: 'name', key: 'name', width: 160,
-      render: (name) => <Text strong style={{ fontSize: 13 }}>{name}</Text>,
+      render: (name) => <Text strong style={{ fontSize: 13, color: ph.dark.text }}>{name}</Text>,
     },
     {
       title: '机器', key: 'machine', width: 100,
-      render: (_, r) => <Text type="secondary">{getMachineName(r.machine_id)}</Text>,
+      render: (_, r) => <Text style={{ color: ph.dark.textSec }}>{getMachineName(r.machine_id)}</Text>,
     },
     {
       title: '状态', dataIndex: 'status', key: 'status', width: 90,
-      render: (s: TaskStatus) => <Tag color={STATUS_CONFIG[s]?.color}>{STATUS_CONFIG[s]?.label}</Tag>,
+      render: (s: TaskStatus) => {
+        const sc = STATUS_CONFIG[s]
+        return sc ? <span className={`ph-status-pill ${sc.pillClass}`}>{sc.label}</span> : null
+      },
     },
     {
       title: '命令摘要', key: 'cmd', ellipsis: true, width: 220,
-      render: (_, r) => (
-        <Text code style={{ fontSize: 11 }}>{cmdSummary(r)}</Text>
-      ),
+      render: (_, r) => <Text className="ph-mono" style={{ fontSize: 11, color: ph.dark.textCode }}>{cmdSummary(r)}</Text>,
     },
     {
       title: '退出码', key: 'exit_code', width: 80,
-      render: (_, r) => r.exit_code !== null
-        ? <Tag color={r.exit_code === 0 ? 'success' : 'error'}>{r.exit_code}</Tag>
-        : '-',
+      render: (_, r) => {
+        if (r.exit_code === null) return <span style={{ color: ph.dark.textTer }}>-</span>
+        const isOk = r.exit_code === 0
+        return (
+          <span className="ph-mono" style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 28, height: 28, borderRadius: '50%', fontSize: 11, fontWeight: 700,
+            background: isOk ? 'rgba(117,193,129,0.12)' : 'rgba(224,83,99,0.12)',
+            color: isOk ? ph.green500 : ph.error,
+            border: `1px solid ${isOk ? 'rgba(117,193,129,0.25)' : 'rgba(224,83,99,0.25)'}`,
+          }}>
+            {r.exit_code}
+          </span>
+        )
+      },
     },
     {
       title: '开始时间', key: 'started_at', width: 130,
-      render: (_, r) => r.started_at ? dayjs(r.started_at).format('MM-DD HH:mm') : '-',
+      render: (_, r) => <Text className="ph-mono" style={{ fontSize: 11, color: ph.dark.textSec }}>{r.started_at ? dayjs(r.started_at).format('MM-DD HH:mm') : '-'}</Text>,
     },
     {
       title: '耗时', key: 'duration', width: 80,
-      render: (_, r) => formatDuration(r.started_at, r.finished_at),
+      render: (_, r) => <Text className="ph-mono" style={{ fontSize: 11, color: ph.dark.textSec }}>{formatDuration(r.started_at, r.finished_at)}</Text>,
     },
     {
       title: '操作', key: 'actions', width: 90,
@@ -269,7 +279,7 @@ export default function HistoryPage() {
                     <Space direction="vertical" size={2}>
                       {(c.args || []).map((a: any, i: number) => (
                         <Space key={i} size={4}>
-                          <Text type="secondary" style={{ fontSize: 11 }}>{a.name}</Text>
+                          <Text style={{ fontSize: 11, color: ph.dark.textSec }}>{a.name}</Text>
                           {renderArgValue(a.value, isLocal)}
                         </Space>
                       ))}
@@ -296,7 +306,7 @@ export default function HistoryPage() {
                       {record.gpu_condition.mode === 'force' ? '强制选卡' : '智能抢卡'}
                     </Tag>
                     {record.gpu_condition.mode === 'force' && (record.gpu_condition.gpu_ids || []).length > 0 && (
-                      <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                      <Text style={{ fontSize: 11, marginLeft: 4, color: ph.dark.textSec }}>
                         GPU {(record.gpu_condition.gpu_ids || []).join(',')}
                       </Text>
                     )}
@@ -349,11 +359,7 @@ export default function HistoryPage() {
             children: logsLoading ? (
               <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
             ) : (
-              <pre style={{
-                background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6,
-                height: 400, overflow: 'auto', fontSize: 12, margin: 0,
-                whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-              }}>
+              <pre className="ph-terminal" style={{ height: 400, margin: 0 }}>
                 {(tab === 'stdout' ? logsContent.stdout : logsContent.stderr) || '（无输出）'}
               </pre>
             ),

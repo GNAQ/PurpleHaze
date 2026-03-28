@@ -8,6 +8,7 @@ import {
   FolderOutlined, FileOutlined, ArrowLeftOutlined, HomeOutlined,
 } from '@ant-design/icons'
 import { tasksApi, FsItem } from '../api/tasks'
+import { ph } from '../theme/tokens'
 
 const { Text } = Typography
 
@@ -76,7 +77,7 @@ export default function PathPickerModal({
           <Button
             type="primary"
             onClick={() => { onSelect(currentPath); onClose() }}
-            style={{ background: '#7c3aed' }}
+            style={{ background: ph.purple500 }}
           >
             选择当前目录: {currentPath}
           </Button>
@@ -116,7 +117,7 @@ export default function PathPickerModal({
       </Space>
 
       {/* 目录列表 */}
-      <div style={{ height: 320, overflow: 'auto', border: '1px solid #f0f0f0', borderRadius: 6 }}>
+      <div style={{ height: 320, overflow: 'auto', border: `1px solid ${ph.dark.border}`, borderRadius: 6 }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <Spin />
@@ -141,8 +142,8 @@ export default function PathPickerModal({
               >
                 <Space>
                   {item.is_dir
-                    ? <FolderOutlined style={{ color: '#faad14' }} />
-                    : <FileOutlined style={{ color: '#8c8c8c' }} />
+                    ? <FolderOutlined style={{ color: ph.warning }} />
+                    : <FileOutlined style={{ color: ph.dark.textTer }} />
                   }
                   <Text style={{ fontSize: 13 }}>{item.name}</Text>
                 </Space>

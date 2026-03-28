@@ -1,90 +1,117 @@
 import type { ThemeConfig } from 'antd'
+import { theme } from 'antd'
 import { ph } from './tokens'
 
 export const antdTheme: ThemeConfig = {
+  algorithm: theme.darkAlgorithm,
   token: {
-    // 主色：兰花紫
+    // 主色
     colorPrimary: ph.purple500,
-    // 成功：鼠尾草绿
     colorSuccess: ph.green500,
-    // 警告 / 错误
     colorWarning: ph.warning,
     colorError: ph.error,
     // 文字
-    colorTextBase: ph.gray700,
-    colorTextSecondary: ph.gray500,
-    // 边框 / 分割线
-    colorBorder: ph.gray200,
-    colorBorderSecondary: ph.gray200,
-    colorSplit: ph.gray200,
+    colorTextBase: ph.dark.text,
+    colorTextSecondary: ph.dark.textSec,
+    // 边框
+    colorBorder: 'rgba(188,115,173,0.20)',
+    colorBorderSecondary: 'rgba(188,115,173,0.12)',
+    colorSplit: 'rgba(188,115,173,0.10)',
     // 背景
-    colorBgLayout: ph.gray100,
-    colorBgContainer: '#ffffff',
+    colorBgLayout: ph.dark.bg,
+    colorBgContainer: ph.dark.surface1,
+    colorBgElevated: ph.dark.surface3,
+    colorBgSpotlight: ph.dark.surface2,
     // 圆角
-    borderRadius: 8,
+    borderRadius: 10,
     borderRadiusSM: 6,
-    borderRadiusLG: 12,
+    borderRadiusLG: 14,
     // 链接
-    colorLink: ph.purple600,
-    colorLinkHover: ph.purple500,
-    // 字体（与 index.css 保持一致）
+    colorLink: ph.purple400,
+    colorLinkHover: ph.purple300,
+    // 字体
     fontFamily:
-      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif",
+      "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif",
+    fontFamilyCode: "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, monospace",
+    // 动效
+    motionDurationMid: '0.25s',
+    motionDurationSlow: '0.35s',
   },
   components: {
-    // ── 侧边菜单 ──────────────────────────────────────────────────────────────
     Menu: {
-      itemSelectedBg: ph.purple100,
-      itemSelectedColor: ph.purple500,
-      itemHoverBg: ph.purple50,
-      itemHoverColor: ph.purple600,
-      itemActiveBg: ph.purple100,
+      darkItemBg: 'transparent',
+      darkSubMenuItemBg: 'transparent',
+      darkItemSelectedBg: 'rgba(188,115,173,0.15)',
+      darkItemSelectedColor: ph.purple400,
+      darkItemHoverBg: 'rgba(188,115,173,0.08)',
+      darkItemHoverColor: ph.purple300,
+      itemHeight: 44,
+      iconSize: 16,
     },
-    // ── Badge（运行态用绿色） ──────────────────────────────────────────────────
     Badge: {
       colorSuccess: ph.green500,
     },
-    // ── Tag ───────────────────────────────────────────────────────────────────
     Tag: {
       colorSuccess: ph.green500,
-      colorSuccessBg: ph.green100,
-      colorSuccessBorder: ph.green200,
+      colorSuccessBg: 'rgba(117,193,129,0.12)',
+      colorSuccessBorder: 'rgba(117,193,129,0.25)',
     },
-    // ── Tabs ──────────────────────────────────────────────────────────────────
     Tabs: {
       inkBarColor: ph.purple500,
-      itemSelectedColor: ph.purple500,
-      itemHoverColor: ph.purple600,
+      itemSelectedColor: ph.purple400,
+      itemHoverColor: ph.purple300,
+      cardBg: ph.dark.surface1,
     },
-    // ── Input ─────────────────────────────────────────────────────────────────
     Input: {
       activeBorderColor: ph.purple500,
       hoverBorderColor: ph.purple400,
+      colorBgContainer: ph.dark.surface0,
     },
-    // ── Select ────────────────────────────────────────────────────────────────
     Select: {
-      optionSelectedBg: ph.purple100,
+      optionSelectedBg: 'rgba(188,115,173,0.15)',
+      colorBgContainer: ph.dark.surface0,
     },
-    // ── Collapse ─────────────────────────────────────────────────────────────
     Collapse: {
       headerBg: 'transparent',
+      contentBg: 'transparent',
     },
-    // ── Divider ───────────────────────────────────────────────────────────────
     Divider: {
-      colorSplit: ph.gray200,
+      colorSplit: 'rgba(188,115,173,0.12)',
     },
-    // ── Table ─────────────────────────────────────────────────────────────────
     Table: {
-      headerBg: ph.purple50,
-      rowHoverBg: ph.purple50,
+      headerBg: ph.dark.surface0,
+      rowHoverBg: 'rgba(188,115,173,0.06)',
+      colorBgContainer: ph.dark.surface1,
+      headerColor: ph.dark.textSec,
+      borderColor: 'rgba(188,115,173,0.10)',
     },
-    // ── Card ──────────────────────────────────────────────────────────────────
     Card: {
-      colorBorderSecondary: ph.gray200,
+      colorBgContainer: ph.dark.surface1,
+      colorBorderSecondary: 'rgba(188,115,173,0.15)',
     },
-    // ── Modal ─────────────────────────────────────────────────────────────────
     Modal: {
-      titleColor: ph.gray700,
+      contentBg: ph.dark.surface2,
+      headerBg: ph.dark.surface2,
+      titleColor: ph.dark.text,
+    },
+    Button: {
+      primaryShadow: '0 2px 8px rgba(188,115,173,0.30)',
+      defaultBg: ph.dark.surface0,
+      defaultBorderColor: 'rgba(188,115,173,0.20)',
+    },
+    Form: {
+      labelColor: ph.dark.textSec,
+    },
+    Descriptions: {
+      labelBg: 'transparent',
+      contentColor: ph.dark.text,
+      titleColor: ph.dark.text,
+    },
+    Spin: {
+      colorPrimary: ph.purple500,
+    },
+    Popconfirm: {
+      colorWarning: ph.warning,
     },
   },
 }

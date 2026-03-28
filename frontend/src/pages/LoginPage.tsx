@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Card, Form, Input, Button, Typography, message, Space } from 'antd'
+import { Form, Input, Button, Typography, message, Space } from 'antd'
 import { LockOutlined } from '@ant-design/icons'
 import { useAuthStore } from '../store/authStore'
 import { authApi } from '../api/auth'
+import { ph } from '../theme/tokens'
 
 const { Title, Paragraph } = Typography
 
@@ -46,20 +47,57 @@ export default function LoginPage({ isSetup }: Props) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #1c0f28 0%, #7a3b6e 100%)',
+        background: ph.dark.bg,
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
-      <Card
-        style={{ width: 380, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
-        variant="borderless"
+      {/* Ambient background glow */}
+      <div style={{
+        position: 'absolute',
+        width: 500, height: 500,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(188,115,173,0.12) 0%, transparent 70%)',
+        top: '20%', left: '30%',
+        filter: 'blur(80px)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute',
+        width: 400, height: 400,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(117,193,129,0.08) 0%, transparent 70%)',
+        bottom: '10%', right: '20%',
+        filter: 'blur(80px)',
+        pointerEvents: 'none',
+      }} />
+
+      <div
+        className="ph-glass ph-fade-in"
+        style={{
+          width: 400,
+          borderRadius: 16,
+          padding: '40px 32px',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
+          position: 'relative',
+          zIndex: 1,
+        }}
       >
-        <Space direction="vertical" size={4} style={{ width: '100%', marginBottom: 24, textAlign: 'center' }}>
-          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-            <circle cx="24" cy="24" r="24" fill="#bc73ad" />
-            <text x="24" y="32" textAnchor="middle" fontSize="24" fill="white" fontWeight="bold">P</text>
-          </svg>
-          <Title level={3} style={{ margin: 0 }}>PurpleHaze</Title>
-          <Paragraph type="secondary" style={{ margin: 0 }}>
+        <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 28, textAlign: 'center' }}>
+          <img
+            src="/assets/PPH-logo-round.png"
+            alt="PurpleHaze"
+            style={{
+              width: 52, height: 52,
+              filter: 'drop-shadow(0 0 12px rgba(188,115,173,0.5))',
+              margin: '0 auto',
+              display: 'block',
+            }}
+          />
+          <Title level={3} style={{ margin: 0, color: ph.dark.text, letterSpacing: 1 }}>
+            PurpleHaze
+          </Title>
+          <Paragraph style={{ margin: 0, color: ph.dark.textSec, fontSize: 13 }}>
             {setupMode ? '首次使用，请设置登录密码' : '请输入密码以继续'}
           </Paragraph>
         </Space>
@@ -67,38 +105,47 @@ export default function LoginPage({ isSetup }: Props) {
         <Form layout="vertical" onFinish={handleSubmit} requiredMark={false}>
           <Form.Item
             name="password"
-            label="密码"
+            label={<span style={{ color: ph.dark.textSec }}>密码</span>}
             rules={[
               { required: true, message: '请输入密码' },
               setupMode ? { min: 6, message: '密码至少 6 位' } : {},
             ]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="请输入密码" size="large" />
+            <Input.Password
+              prefix={<LockOutlined style={{ color: ph.dark.textTer }} />}
+              placeholder="请输入密码"
+              size="large"
+            />
           </Form.Item>
 
           {setupMode && (
             <Form.Item
               name="confirm"
-              label="确认密码"
+              label={<span style={{ color: ph.dark.textSec }}>确认密码</span>}
               rules={[{ required: true, message: '请再次输入密码' }]}
             >
-              <Input.Password prefix={<LockOutlined />} placeholder="请再次输入密码" size="large" />
+              <Input.Password
+                prefix={<LockOutlined style={{ color: ph.dark.textTer }} />}
+                placeholder="请再次输入密码"
+                size="large"
+              />
             </Form.Item>
           )}
 
-          <Form.Item style={{ marginBottom: 0 }}>
+          <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
             <Button
               type="primary"
               htmlType="submit"
               loading={loading}
               size="large"
               block
+              style={{ fontWeight: 600, letterSpacing: 0.5 }}
             >
               {setupMode ? '设置密码' : '登录'}
             </Button>
           </Form.Item>
         </Form>
-      </Card>
+      </div>
     </div>
   )
 }

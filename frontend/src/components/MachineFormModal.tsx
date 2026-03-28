@@ -4,6 +4,7 @@ import {
   Tabs, Typography, Row, Col,
 } from 'antd'
 import type { Machine, MachineCreate } from '../api/machines'
+import { ph } from '../theme/tokens'
 
 const { Text } = Typography
 
@@ -103,7 +104,7 @@ export default function MachineFormModal({ open, machine, onOk, onCancel }: Prop
           {({ getFieldValue }) =>
             !getFieldValue('is_local') && (
               <>
-                <Divider orientation="left" plain style={{ fontSize: 12, color: '#6b7280' }}>SSH 连接信息</Divider>
+                <Divider orientation="left" plain style={{ fontSize: 12, color: ph.dark.textSec }}>SSH 连接信息</Divider>
                 <Row gutter={12}>
                   <Col span={16}>
                     <Form.Item name="ssh_host" label="主机地址" rules={[{ required: true, message: '请输入主机地址' }]}>
@@ -142,7 +143,7 @@ export default function MachineFormModal({ open, machine, onOk, onCancel }: Prop
                 </Form.Item>
 
                 {/* ── 跳板机配置 ── */}
-                <Divider orientation="left" plain style={{ fontSize: 12, color: '#6b7280' }}>跳板机（ProxyJump）</Divider>
+                <Divider orientation="left" plain style={{ fontSize: 12, color: ph.dark.textSec }}>跳板机（ProxyJump）</Divider>
                 <Form.Item name="use_proxy_jump" label="启用跳板机" valuePropName="checked">
                   <Switch checkedChildren="启用" unCheckedChildren="关闭" />
                 </Form.Item>
@@ -209,7 +210,7 @@ export default function MachineFormModal({ open, machine, onOk, onCancel }: Prop
           }
         </Form.Item>
 
-        <Divider orientation="left" plain style={{ fontSize: 12, color: '#6b7280' }}>监控配置</Divider>
+        <Divider orientation="left" plain style={{ fontSize: 12, color: ph.dark.textSec }}>监控配置</Divider>
         <Form.Item name={['monitor_config', 'interval']} label="刷新间隔（秒）">
           <InputNumber min={1} max={3600} style={{ width: '100%' }} />
         </Form.Item>

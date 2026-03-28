@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Button, Spin, Empty, Typography, message, Space } from 'antd'
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import {
@@ -6,27 +6,25 @@ import {
 } from '@dnd-kit/core'
 import {
   SortableContext, sortableKeyboardCoordinates, useSortable,
-  horizontalListSortingStrategy, arrayMove,
+  rectSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { Machine, MachineCreate } from '../api/machines'
 import { machinesApi } from '../api/machines'
 import MachineCard from '../components/MachineCard'
 import MachineFormModal from '../components/MachineFormModal'
+import { ph } from '../theme/tokens'
 
 const { Title } = Typography
 
-/** Sortable item for a single machine card */
 function SortableMachineItem({
-  machine,
-  onEdit,
-  onDeleted,
-  onConnectionChange,
+  machine, onEdit, onDeleted, onConnectionChange, index,
 }: {
   machine: Machine
   onEdit: (m: Machine) => void
   onDeleted: (id: number) => void
   onConnectionChange: (id: number, connected: boolean) => void
+  index: number
 }) {
   const {
     attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging,
@@ -35,15 +33,14 @@ function SortableMachineItem({
   return (
     <div
       ref={setNodeRef}
+      className={isDragging ? 'ph-drag-active' : 'ph-hover-lift'}
       style={{
-        display: 'flex', flexDirection: 'column',
-        minWidth: 440,
-        width: 'min(460px, calc(100vw - 120px))',
-        flex: '0 0 auto',
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.45 : 1,
+        opacity: isDragging ? 0.9 : 1,
         zIndex: isDragging ? 999 : undefined,
+        animation: `ph-fade-in 0.35s ease-out both`,
+        animationDelay: `${index * 60}ms`,
       }}
       {...attributes}
     >
@@ -64,10 +61,6 @@ export default function MachinesPage() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null)
-  const [topScrollWidth, setTopScrollWidth] = useState(0)
-  const topScrollRef = useRef<HTMLDivElement | null>(null)
-  const laneScrollRef = useRef<HTMLDivElement | null>(null)
-  const syncingScrollRef = useRef(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -86,30 +79,6 @@ export default function MachinesPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
-
-  useEffect(() => {
-    const syncWidth = () => {
-      if (!laneScrollRef.current) return
-      setTopScrollWidth(laneScrollRef.current.scrollWidth)
-    }
-    syncWidth()
-    window.addEventListener('resize', syncWidth)
-    return () => window.removeEventListener('resize', syncWidth)
-  }, [machines])
-
-  const onTopScroll = () => {
-    if (!topScrollRef.current || !laneScrollRef.current || syncingScrollRef.current) return
-    syncingScrollRef.current = true
-    laneScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft
-    requestAnimationFrame(() => { syncingScrollRef.current = false })
-  }
-
-  const onLaneScroll = () => {
-    if (!topScrollRef.current || !laneScrollRef.current || syncingScrollRef.current) return
-    syncingScrollRef.current = true
-    topScrollRef.current.scrollLeft = laneScrollRef.current.scrollLeft
-    requestAnimationFrame(() => { syncingScrollRef.current = false })
-  }
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
@@ -151,8 +120,8 @@ export default function MachinesPage() {
 
   return (
     <div style={{ height: '100%', overflowY: 'auto', paddingRight: 4 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <Title level={4} style={{ margin: 0 }}>机器管理</Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0, color: ph.dark.text }}>机器管理</Title>
         <Space>
           <Button icon={<ReloadOutlined />} onClick={load}>刷新</Button>
           <Button
@@ -166,14 +135,11 @@ export default function MachinesPage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 80 }}>
-          <Spin size="large" />
-        </div>
+        <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>
       ) : machines.length === 0 ? (
-        <Empty description="暂无机器" style={{ padding: 80 }}>
+        <Empty description={<span style={{ color: ph.dark.textSec }}>暂无机器</span>} style={{ padding: 80 }}>
           <Button
-            type="primary"
-            icon={<PlusOutlined />}
+            type="primary" icon={<PlusOutlined />}
             onClick={() => { setEditingMachine(null); setModalOpen(true) }}
           >
             添加第一台机器
@@ -183,32 +149,26 @@ export default function MachinesPage() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
             items={machines.map((m) => `mc-${m.id}`)}
-            strategy={horizontalListSortingStrategy}
+            strategy={rectSortingStrategy}
           >
             <div
-              ref={topScrollRef}
-              className="machines-horizontal-scroll-top"
-              onScroll={onTopScroll}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))',
+                gap: 16,
+                alignItems: 'start',
+              }}
             >
-              <div style={{ width: topScrollWidth, height: 1 }} />
-            </div>
-
-            <div
-              ref={laneScrollRef}
-              className="machines-horizontal-scroll"
-              onScroll={onLaneScroll}
-            >
-              <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', minHeight: 1, paddingBottom: 8 }}>
-              {machines.map((m) => (
+              {machines.map((m, i) => (
                 <SortableMachineItem
                   key={m.id}
                   machine={m}
+                  index={i}
                   onEdit={(machine) => { setEditingMachine(machine); setModalOpen(true) }}
                   onDeleted={(id) => setMachines((prev) => prev.filter((x) => x.id !== id))}
                   onConnectionChange={handleConnectionChange}
                 />
               ))}
-              </div>
             </div>
           </SortableContext>
         </DndContext>

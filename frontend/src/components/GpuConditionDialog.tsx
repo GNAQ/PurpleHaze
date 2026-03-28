@@ -9,6 +9,7 @@ import {
 } from 'antd'
 import { PlusOutlined, DeleteOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import { GpuCondition, GpuConditionItem, GpuPreset, tasksApi } from '../api/tasks'
+import { ph } from '../theme/tokens'
 
 const { TextArea } = Input
 const { Text } = Typography
@@ -174,7 +175,7 @@ export default function GpuConditionDialog({ open, onClose, onOk, onSkip, initia
           {onSkip && (
             <Button onClick={() => { onClose(); onSkip() }}>无需抢卡条件</Button>
           )}
-          <Button type="primary" onClick={handleOk} style={{ background: '#7c3aed' }}>确认</Button>
+          <Button type="primary" onClick={handleOk} style={{ background: ph.purple500 }}>确认</Button>
         </Space>
       }
     >

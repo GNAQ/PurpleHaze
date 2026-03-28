@@ -5,6 +5,7 @@ import {
 import { LockOutlined, SaveOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { authApi, type SettingItem } from '../api/auth'
 import { tasksApi, type CondaEnv } from '../api/tasks'
+import { ph } from '../theme/tokens'
 
 const { Title, Text } = Typography
 
@@ -78,10 +79,10 @@ export default function SettingsPage() {
 
   return (
     <div style={{ maxWidth: 640 }}>
-      <Title level={4} style={{ marginBottom: 20 }}>设置</Title>
+      <Title level={4} style={{ margin: 0, marginBottom: 20, color: ph.dark.text }}>设置</Title>
 
       {/* 修改密码 */}
-      <Card title="修改密码" style={{ marginBottom: 16, borderRadius: 10 }}>
+      <Card title="修改密码" style={{ marginBottom: 16 }} className="ph-glass-card">
         <Form form={pwdForm} layout="vertical" onFinish={handleChangePassword}>
           <Form.Item name="old_password" label="当前密码" rules={[{ required: true, message: '请输入当前密码' }]}>
             <Input.Password prefix={<LockOutlined />} />
@@ -99,18 +100,18 @@ export default function SettingsPage() {
       </Card>
 
       {/* 其他配置（键值对） */}
-      <Card title="其他配置" style={{ borderRadius: 10 }}>
+      <Card title="其他配置" className="ph-glass-card">
         {settingsLoading ? (
           <Spin />
         ) : settings.length === 0 ? (
-          <Text type="secondary">暂无可配置项</Text>
+          <Text style={{ color: ph.dark.textSec }}>暂无可配置项</Text>
         ) : (
           <Space direction="vertical" style={{ width: '100%' }}>
             {settings.map((item, idx) => (
               <div key={item.key}>
-                <Text strong style={{ fontSize: 13 }}>{item.key}</Text>
+                <Text strong style={{ fontSize: 13, color: ph.dark.text }}>{item.key}</Text>
                 {item.description && (
-                  <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>{item.description}</Text>
+                  <Text style={{ fontSize: 12, marginLeft: 8, color: ph.dark.textSec }}>{item.description}</Text>
                 )}
                 <Input
                   value={item.value}
@@ -146,8 +147,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Conda 环境管理 */}
-      <Card title="Conda 环境" style={{ marginTop: 16, borderRadius: 10 }}
-        extra={
+      <Card title="Conda 环境" style={{ marginTop: 16 }}         extra={
           <Button size="small" icon={<PlusOutlined />} onClick={() => setCondaAdding((v) => !v)}>
             {condaAdding ? '取消' : '添加'}
           </Button>
@@ -182,7 +182,7 @@ export default function SettingsPage() {
                 >
                   <List.Item.Meta
                     title={env.name}
-                    description={env.path ? env.path : <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>conda activate {env.name}</span>}
+                    description={env.path ? env.path : <span style={{ color: ph.dark.textTer, fontStyle: 'italic' }}>conda activate {env.name}</span>}
                   />
                 </List.Item>
               )}

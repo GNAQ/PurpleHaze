@@ -11,6 +11,7 @@ import {
 } from '../api/tasks'
 import GpuConditionDialog from './GpuConditionDialog'
 import PathPickerModal from './PathPickerModal'
+import { ph } from '../theme/tokens'
 
 interface Props {
   open: boolean
@@ -154,7 +155,7 @@ export default function TaskBatchModal({
               loading={submitting}
               onClick={handleSubmit}
               icon={<ThunderboltOutlined />}
-              style={{ background: '#7c3aed' }}
+              style={{ background: ph.purple500 }}
             >
               批量加入队列
             </Button>

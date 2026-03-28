@@ -17,6 +17,7 @@ import {
 } from '../api/tasks'
 import PathPickerModal from './PathPickerModal'
 import GpuConditionDialog from './GpuConditionDialog'
+import { ph } from '../theme/tokens'
 
 interface Props {
   open: boolean
@@ -284,7 +285,7 @@ export default function TaskCreateModal({
               loading={submitting}
               onClick={handleSubmit}
               icon={<ThunderboltOutlined />}
-              style={{ background: '#7c3aed' }}
+              style={{ background: ph.purple500 }}
             >
               {initialTask ? '保存' : '加入队列'}
             </Button>
@@ -294,10 +295,10 @@ export default function TaskCreateModal({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div
             style={{
-              border: '1px solid #f0e6f5',
+              border: `1px solid ${ph.dark.border}`,
               borderRadius: 10,
               padding: 12,
-              background: '#faf5ff',
+              background: ph.dark.surface0,
             }}
           >
             <Space direction="vertical" size={8} style={{ width: '100%' }}>
@@ -322,7 +323,7 @@ export default function TaskCreateModal({
                   icon={<SaveOutlined />}
                   loading={savingTemplate}
                   onClick={handleSaveTemplate}
-                  style={{ background: '#7c3aed' }}
+                  style={{ background: ph.purple500 }}
                 >
                   新建保存
                 </Button>
@@ -349,7 +350,7 @@ export default function TaskCreateModal({
                   },
                   style: {
                     cursor: 'pointer',
-                    background: tpl.id === selectedTemplateId ? 'rgba(124,58,237,0.08)' : undefined,
+                    background: tpl.id === selectedTemplateId ? 'rgba(188,115,173,0.12)' : undefined,
                   },
                 })}
                 columns={[

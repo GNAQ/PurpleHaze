@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { Progress, Tooltip, Typography } from 'antd'
+import { Tooltip, Typography } from 'antd'
+import { ph, utilColor } from '../theme/tokens'
 
 const { Text } = Typography
 
@@ -13,25 +14,32 @@ interface Props {
 
 export default function ResourceBar({ label, value, color, subLabel, small }: Props) {
   const pct = Math.min(100, Math.max(0, value))
-  const strokeColor = color ?? (pct > 85 ? '#e05363' : pct > 60 ? '#e8a838' : '#75c181')
+  const strokeColor = color ?? utilColor(pct)
 
   return (
     <Tooltip title={subLabel ?? `${pct.toFixed(1)}%`} placement="right">
       <div style={{ marginBottom: small ? 4 : 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-          <Text style={{ fontSize: small ? 11 : 12, color: '#6b7280' }}>{label}</Text>
-          <Text style={{ fontSize: small ? 11 : 12, color: '#374151', fontVariantNumeric: 'tabular-nums' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+          <Text style={{ fontSize: small ? 10 : 11, color: ph.dark.textSec }}>{label}</Text>
+          <Text className="ph-mono" style={{ fontSize: small ? 10 : 11, color: ph.dark.text }}>
             {subLabel ?? `${pct.toFixed(1)}%`}
           </Text>
         </div>
-        <Progress
-          percent={pct}
-          showInfo={false}
-          strokeColor={strokeColor}
-          trailColor="#e0dce4"
-          size={small ? ['100%', 4] : ['100%', 6]}
-          style={{ margin: 0 }}
-        />
+        <div style={{
+          height: small ? 4 : 6,
+          borderRadius: 3,
+          background: 'rgba(188,115,173,0.10)',
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            width: `${pct}%`,
+            height: '100%',
+            borderRadius: 3,
+            background: `linear-gradient(90deg, ${strokeColor}, ${strokeColor}dd)`,
+            boxShadow: pct > 60 ? `0 0 8px ${strokeColor}40` : 'none',
+            transition: 'width 0.6s ease-out',
+          }} />
+        </div>
       </div>
     </Tooltip>
   )
