@@ -9,7 +9,7 @@ import {
 } from 'antd'
 import {
   PlusOutlined, DeleteOutlined, FolderOpenOutlined, ThunderboltOutlined,
-  SaveOutlined,
+  SaveOutlined, ImportOutlined,
 } from '@ant-design/icons'
 import { Machine, machinesApi } from '../api/machines'
 import {
@@ -37,6 +37,139 @@ interface Props {
   defaultPipelineId?: number | null
 }
 
+/**
+ * 解析一条完整的 shell 命令，拆分为 work_dir / env_vars / command / args。
+ *
+ * 识别规则：
+ *  - `cd /path &&` 或 `cd /path;` 前缀 → work_dir
+ *  - `KEY=VALUE` 前缀（出现在命令程序名之前） → env_vars
+ *  - 程序名 + 紧跟的 .py/.sh 文件 合并为 command（如 `python train.py`）
+ *  - 后续的 `--flag value` / `--flag=value` / `-f value` → args
+ *  - 裸值（非 - 开头）→ args with name=""
+ */
+function parseCommand(raw: string): {
+  work_dir: string
+  env_vars: { key: string; value: string }[]
+  command: string
+  args: { name: string; value: string }[]
+} {
+  let input = raw.trim()
+  let work_dir = ''
+  const env_vars: { key: string; value: string }[] = []
+  const args: { name: string; value: string }[] = []
+
+  // 1. Extract `cd <path> &&` or `cd <path>;` prefix
+  const cdMatch = input.match(/^cd\s+(\S+)\s*(?:&&|;)\s*/)
+  if (cdMatch) {
+    work_dir = cdMatch[1]
+    input = input.slice(cdMatch[0].length)
+  }
+
+  // 2. Tokenize respecting quotes
+  const tokens = shellTokenize(input)
+  if (tokens.length === 0) return { work_dir, env_vars, command: '', args }
+
+  // 3. Extract leading KEY=VALUE env vars (before the program name)
+  let idx = 0
+  while (idx < tokens.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[idx])) {
+    const eqPos = tokens[idx].indexOf('=')
+    env_vars.push({ key: tokens[idx].slice(0, eqPos), value: tokens[idx].slice(eqPos + 1) })
+    idx++
+  }
+
+  if (idx >= tokens.length) return { work_dir, env_vars, command: '', args }
+
+  // 4. Build command: program name + any immediately following script file (.py, .sh, etc.)
+  let command = tokens[idx]
+  idx++
+  // Absorb the next token if it looks like a script file or module path (e.g. train.py, -m torch.distributed.launch)
+  if (idx < tokens.length) {
+    const next = tokens[idx]
+    if (/\.(py|sh|bash|r|jl|rb|pl)$/i.test(next)) {
+      command += ' ' + next
+      idx++
+    } else if (command === 'python' || command === 'python3') {
+      // python -m module.name → keep as command
+      if (next === '-m' && idx + 1 < tokens.length) {
+        command += ' -m ' + tokens[idx + 1]
+        idx += 2
+      } else if (next === '-c') {
+        // python -c "code" → keep -c as part of command, code as first arg
+        command += ' -c'
+        idx++
+      }
+    }
+  }
+
+  // 5. Parse remaining tokens as args
+  while (idx < tokens.length) {
+    const tok = tokens[idx]
+    if (tok.startsWith('-')) {
+      // --flag=value
+      const eqPos = tok.indexOf('=')
+      if (eqPos !== -1) {
+        args.push({ name: tok.slice(0, eqPos), value: tok.slice(eqPos + 1) })
+        idx++
+      } else {
+        // --flag value or bare flag (boolean)
+        const nextTok = tokens[idx + 1]
+        if (nextTok !== undefined && !nextTok.startsWith('-')) {
+          args.push({ name: tok, value: nextTok })
+          idx += 2
+        } else {
+          args.push({ name: tok, value: '' })
+          idx++
+        }
+      }
+    } else {
+      // Positional arg
+      args.push({ name: '', value: tok })
+      idx++
+    }
+  }
+
+  return { work_dir, env_vars, command, args }
+}
+
+/** Simple shell tokenizer respecting single/double quotes. */
+function shellTokenize(input: string): string[] {
+  const tokens: string[] = []
+  let i = 0
+  while (i < input.length) {
+    // Skip whitespace
+    while (i < input.length && /\s/.test(input[i])) i++
+    if (i >= input.length) break
+
+    let token = ''
+    while (i < input.length && !/\s/.test(input[i])) {
+      const ch = input[i]
+      if (ch === "'" || ch === '"') {
+        const quote = ch
+        i++ // skip opening quote
+        while (i < input.length && input[i] !== quote) {
+          if (input[i] === '\\' && quote === '"' && i + 1 < input.length) {
+            i++
+            token += input[i]
+          } else {
+            token += input[i]
+          }
+          i++
+        }
+        i++ // skip closing quote
+      } else if (ch === '\\' && i + 1 < input.length) {
+        i++
+        token += input[i]
+        i++
+      } else {
+        token += ch
+        i++
+      }
+    }
+    if (token) tokens.push(token)
+  }
+  return tokens
+}
+
 export default function TaskCreateModal({
   open, onClose, onSubmit, pipelines, machines, initialTask, defaultPipelineId,
 }: Props) {
@@ -58,6 +191,9 @@ export default function TaskCreateModal({
   const [gpuDialogOpen, setGpuDialogOpen] = useState(false)
   // GPU 条件弹窗：存储表单已校验字段，等待抢卡条件确认后再提交
   const [pendingValues, setPendingValues] = useState<any>(null)
+
+  // 命令粘贴识别
+  const [pasteInput, setPasteInput] = useState('')
 
   // 模板管理
   const [saveTemplateName, setSaveTemplateName] = useState('')
@@ -222,6 +358,19 @@ export default function TaskCreateModal({
       command: values.command || '',
       args: args.filter((a) => a.name.trim() || a.value.trim()),
     }
+  }
+
+  function handleParseCommand() {
+    if (!pasteInput.trim()) { message.warning('请先粘贴命令'); return }
+    const parsed = parseCommand(pasteInput)
+    form.setFieldsValue({
+      command: parsed.command,
+      ...(parsed.work_dir ? { work_dir: parsed.work_dir } : {}),
+    })
+    setArgs(parsed.args)
+    if (parsed.env_vars.length > 0) setEnvVars(parsed.env_vars)
+    setPasteInput('')
+    message.success('命令已识别填入')
   }
 
   async function handleSubmit() {
@@ -495,6 +644,35 @@ export default function TaskCreateModal({
                   label: '命令配置',
                   children: (
                     <>
+                      <div style={{
+                        border: `1px dashed ${ph.dark.border}`,
+                        borderRadius: 8,
+                        padding: '10px 12px',
+                        marginBottom: 16,
+                        background: ph.dark.surface0,
+                      }}>
+                        <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
+                          粘贴完整命令，自动识别工作目录、环境变量、命令和参数
+                        </Typography.Text>
+                        <Space.Compact style={{ width: '100%' }}>
+                          <Input.TextArea
+                            placeholder="cd /workspace && CUDA_VISIBLE_DEVICES=0,1 python train.py --lr 0.001 --epochs 100"
+                            value={pasteInput}
+                            onChange={(e) => setPasteInput(e.target.value)}
+                            onPressEnter={(e) => { if (!e.shiftKey) { e.preventDefault(); handleParseCommand() } }}
+                            autoSize={{ minRows: 1, maxRows: 4 }}
+                            style={{ flex: 1 }}
+                          />
+                          <Button
+                            icon={<ImportOutlined />}
+                            onClick={handleParseCommand}
+                            style={{ height: 'auto' }}
+                          >
+                            识别填入
+                          </Button>
+                        </Space.Compact>
+                      </div>
+
                       <Form.Item
                         name="work_dir"
                         label="执行根目录"
