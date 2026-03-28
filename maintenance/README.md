@@ -8,7 +8,9 @@
 | [scheduling.md](scheduling.md) | Tick 循环设计，GPU 条件门控，流水线串行化，离线检测，取消机制 |
 | [task-execution.md](task-execution.md) | 命令构建（config→shell），本地/远程执行路径差异，状态转换，崩溃恢复 |
 | [monitoring.md](monitoring.md) | cache vs history 双数据结构，采集并发安全，本地/远程采集差异 |
-| [frontend.md](frontend.md) | 状态同步模型，任务列表展示逻辑（sort_order反转+折叠），拖拽持久化 |
+| [frontend.md](frontend.md) | 前端状态同步模型、主题系统、命令粘贴解析、机器页滚动与拖拽实现 |
+| [frontend_redesign.md](frontend_redesign.md) | 前端重设计方向、已采用的交互思路与后续视觉演进计划 |
+| [known_issues.md](known_issues.md) | 当前功能缺口、已知技术缺陷与待修复风险 |
 ## 测试
 
 | 文档 | 内容重点 |

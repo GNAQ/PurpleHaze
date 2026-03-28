@@ -5,22 +5,32 @@
 
 ---
 
+## 已落地变更（截至 2026-03-28）
+
+- 侧边栏已经切换为收缩式 icon rail，Header 也已经精简到 48px，并把退出按钮移到底部。
+- 前端已支持深色 / 浅色主题切换，主题模式由 Zustand 持久化，并同步到 Ant Design 和全局 CSS。
+- 机器页已经固定为横向单行机器看板，不再走响应式 grid 方案；顶部使用自绘粗滚动条，底部原生横向滚动条被裁掉。
+- 机器卡片拖拽已经有 grip dots、hover lift、drag overlay 跟手悬浮预览，以及更明确的放置反馈。
+- 任务创建弹窗已支持粘贴完整 shell 命令并自动解析 `work_dir`、`env_vars`、`command`、`args`。
+
 ## 现状问题
 
-当前 UI 完成了暗色换肤，但本质上是 Ant Design 默认组件 + 换色。四个维度的问题：
+当前前端已经完成第一轮重设计，但仍有若干视觉和信息组织层面的迭代空间。四个维度的问题：
 
 | 维度 | 现状 | 问题 |
 |------|------|------|
-| **Layout** | 180px 固定侧边栏 + 全宽内容区；机器卡片水平滚动；流水线 320px 固定列 | 侧边栏浪费空间（只有4个菜单项）；机器卡片无法一览多台；流水线列宽固定不适应屏幕 |
-| **Coloring** | 已换暗色，但层次单一 | surface0/surface1/surface2 之间对比度不够，卡片和背景融为一体；状态色（running/completed/failed）辨识度低 |
-| **Animation** | 仅 fade-in + running-glow | 无路由切换动画；无 hover 反馈动画；无加载骨架屏；resource bar 首次加载无动画感；拖拽无视觉反馈 |
-| **Visual Style** | Ant Design 默认组件形态 | "DRAG" 文字丑陋；GPU 信息是平铺文字无视觉层次；空状态用 antd 默认 Empty；表格是标准 antd Table 无个性 |
+| **Layout** | 侧边栏已收缩；机器卡片为横向看板；流水线仍是固定列 + 横向滚动 | 机器页在小屏上一览性仍弱；流水线列宽仍偏硬，不够自适应 |
+| **Coloring** | 已有深浅主题和语义 token | surface 分层仍可继续拉开；部分状态色对比度仍偏保守 |
+| **Animation** | 已有 route fade-in、hover lift、按钮微交互、拖拽浮层 | 加载动画与状态切换动画还不成体系；部分模块仍缺少更强的进入/更新反馈 |
+| **Visual Style** | 机器页和任务页已有定制视觉语言 | 历史页与部分表单仍保留较强的 antd 默认感；空状态和表格个性化不足 |
 
 ---
 
 ## Phase 1: Layout 重构
 
 ### 1.1 侧边栏 → 收缩式导航轨 (Icon Rail)
+
+状态：**已实现**
 
 **改动文件**: `AppLayout.tsx`, `index.css`
 
@@ -32,14 +42,16 @@
 
 **效果**: 内容区从 `calc(100% - 180px)` 增长到 `calc(100% - 64px)`，多出 116px 给卡片和流水线。
 
-### 1.2 机器页 → 响应式 Grid
+### 1.2 机器页 → 横向机器看板
+
+状态：**已按横向看板方案实现，原 grid 方案不再推进**
 
 **改动文件**: `MachinesPage.tsx`, `MachineCard.tsx`
 
-- 替换水平滚动为 **CSS Grid**: `grid-template-columns: repeat(auto-fill, minmax(420px, 1fr))`
-- 卡片高度自适应内容（不再固定）
-- 移除同步双滚动条逻辑（不再需要）
-- 连接的机器卡片稍高（展示 GPU 详情），离线卡片压缩为 mini 摘要态
+- 采用**单行横向卡片带**，卡片固定宽度，使用 `horizontalListSortingStrategy`
+- 顶部提供**自绘粗横向滚动条**，支持拖动滑块、点击轨道和滚轮横移
+- 底部原生横向滚动条被隐藏，只保留顶部这条用于定位和拖拽
+- 拖拽时使用 `DragOverlay` 显示悬浮卡片，形成“浮起并跟手”的反馈
 
 ### 1.3 流水线列 → 弹性宽度
 
@@ -50,6 +62,8 @@
 - 新建流水线的 "+" 区域从一整列变为尾部 **小按钮**
 
 ### 1.4 Header 精简
+
+状态：**已实现**
 
 **改动文件**: `AppLayout.tsx`
 
@@ -62,6 +76,8 @@
 ## Phase 2: Visual Style 重构
 
 ### 2.1 拖拽手柄 → 微妙的抓手点
+
+状态：**已实现**
 
 **改动文件**: `MachineCard.tsx`, `TasksPage.tsx`, `index.css`
 
@@ -115,6 +131,8 @@
 
 ### 3.1 路由切换动画
 
+状态：**已实现基础版**
+
 **改动文件**: `App.tsx`, `index.css`
 
 - 页面切换使用 **fade + 轻微 translateY**
@@ -124,11 +142,13 @@
 
 ### 3.2 卡片交互动画
 
+状态：**部分实现**
+
 **改动文件**: `MachineCard.tsx`, `TasksPage.tsx`, `index.css`
 
 - **Hover lift**: `transform: translateY(-2px); box-shadow` 增强 — 0.2s ease
 - **Click ripple**: 点击时短暂的 border-glow flash（0.3s）
-- **拖拽态**: 卡片 scale(1.02) + 更强的 glow shadow + 背景变亮
+- **拖拽态**: 机器页当前采用 drag overlay 跟手浮层，而不是只在原卡片上做 scale/glow
 - **放下动画**: spring-like 回弹（用 CSS `cubic-bezier(0.34, 1.56, 0.64, 1)`)
 
 ### 3.3 数据加载动画

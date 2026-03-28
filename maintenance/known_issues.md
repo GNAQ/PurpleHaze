@@ -4,7 +4,6 @@
 实现临时阻塞流水线的按钮/功能
 实现全局起任务的cooldown time
 抢卡条件的进程部分需要测试
-实现手动填入完整命令、命令行识别
 一键读取conda环境、conda区分机器的功能（CondaEnv 目前为全局模型，不区分机器）
 实现task retry & retry uplimit
 文本条件表达式缺少独立的语法说明页面（dev_plan 要求"需要提供一个说明文本式条件表达式语法的页面"，当前仅有 GpuConditionDialog 内的内联提示文本）
