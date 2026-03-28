@@ -81,7 +81,7 @@ def _eval_simple_condition(cond: dict, metrics: dict) -> bool:
 # AST 白名单：只允许纯算术/逻辑表达式
 _ALLOWED_AST_NODES = {
     ast.Expression, ast.BoolOp, ast.BinOp, ast.UnaryOp, ast.Compare,
-    ast.Constant, ast.Name,
+    ast.Constant, ast.Name, ast.Load,
     ast.And, ast.Or, ast.Not,
     ast.Gt, ast.GtE, ast.Lt, ast.LtE, ast.Eq, ast.NotEq,
     ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Mod,
