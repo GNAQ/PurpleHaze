@@ -91,22 +91,58 @@ html[data-theme="light"] *::-webkit-scrollbar-thumb:hover {
   background: transparent;
 }
 
-/* ── Machines horizontal scroll ────────────────────────────────────────── */
-.machines-horizontal-scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 8px;
-  scrollbar-width: none;
-}
-.machines-horizontal-scroll::-webkit-scrollbar {
-  display: none;
-}
+/* ── Hide scrollbar utility ───────────────────────────────────────────── */
+.ph-hide-scrollbar { scrollbar-width: none; }
+.ph-hide-scrollbar::-webkit-scrollbar { display: none; }
 
-.machines-horizontal-scroll-top {
-  overflow-x: auto;
-  overflow-y: hidden;
-  margin-bottom: 8px;
-  scrollbar-width: thin;
+/* ── Machines top scrollbar (thick, easy to grab) ─────────────────────── */
+.ph-top-scrollbar {
+  scrollbar-width: auto;
+  scrollbar-color: rgba(188,115,173,0.45) rgba(188,115,173,0.08);
+}
+.ph-top-scrollbar::-webkit-scrollbar {
+  height: 14px;
+}
+.ph-top-scrollbar::-webkit-scrollbar-track {
+  background: rgba(188,115,173,0.06);
+  border-radius: 7px;
+}
+.ph-top-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(188,115,173,0.35);
+  border-radius: 7px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.ph-top-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(188,115,173,0.55);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.ph-top-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(188,115,173,0.70);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+html[data-theme="light"] .ph-top-scrollbar {
+  scrollbar-color: rgba(122,59,110,0.30) rgba(122,59,110,0.06);
+}
+html[data-theme="light"] .ph-top-scrollbar::-webkit-scrollbar-track {
+  background: rgba(122,59,110,0.04);
+}
+html[data-theme="light"] .ph-top-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(122,59,110,0.22);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+html[data-theme="light"] .ph-top-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(122,59,110,0.35);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+html[data-theme="light"] .ph-top-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(122,59,110,0.50);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 /* ── Keyframes ─────────────────────────────────────────────────────────── */

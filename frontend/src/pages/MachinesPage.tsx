@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Button, Spin, Empty, Typography, message, Space } from 'antd'
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import {
@@ -6,7 +6,7 @@ import {
 } from '@dnd-kit/core'
 import {
   SortableContext, sortableKeyboardCoordinates, useSortable,
-  rectSortingStrategy, arrayMove,
+  horizontalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { Machine, MachineCreate } from '../api/machines'
@@ -16,6 +16,87 @@ import MachineFormModal from '../components/MachineFormModal'
 import { useTheme } from '../theme/useTheme'
 
 const { Title } = Typography
+
+const SCROLLBAR_H = 14
+
+/**
+ * Horizontal scroll area with a thick custom scrollbar **above** the content.
+ * Uses a proxy div that mirrors the content width so the native scrollbar
+ * sits on top, then syncs scroll positions between proxy and content.
+ */
+function HorizontalScrollArea({ children }: { children: React.ReactNode }) {
+  const proxyRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [contentWidth, setContentWidth] = useState(0)
+  const syncing = useRef(false)
+
+  // Observe content width changes
+  useEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setContentWidth(el.scrollWidth))
+    ro.observe(el)
+    // Also measure children
+    for (const child of Array.from(el.children)) ro.observe(child)
+    return () => ro.disconnect()
+  }, [children])
+
+  const syncScroll = (source: 'proxy' | 'content') => {
+    if (syncing.current) return
+    syncing.current = true
+    const p = proxyRef.current
+    const c = contentRef.current
+    if (p && c) {
+      if (source === 'proxy') c.scrollLeft = p.scrollLeft
+      else p.scrollLeft = c.scrollLeft
+    }
+    requestAnimationFrame(() => { syncing.current = false })
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      {/* Top scrollbar proxy */}
+      <div
+        ref={proxyRef}
+        onScroll={() => syncScroll('proxy')}
+        className="ph-top-scrollbar"
+        style={{
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          height: SCROLLBAR_H + 4,
+          minHeight: SCROLLBAR_H + 4,
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ width: contentWidth, height: 1 }} />
+      </div>
+
+      {/* Actual content — hidden native scrollbar */}
+      <div
+        ref={contentRef}
+        onScroll={() => syncScroll('content')}
+        className="ph-hide-scrollbar"
+        style={{
+          overflowX: 'auto',
+          overflowY: 'auto',
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            gap: 16,
+            padding: '8px 2px 16px',
+            alignItems: 'flex-start',
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function SortableMachineItem({
   machine, onEdit, onDeleted, onConnectionChange, index,
@@ -41,6 +122,9 @@ function SortableMachineItem({
         zIndex: isDragging ? 999 : undefined,
         animation: `ph-fade-in 0.35s ease-out both`,
         animationDelay: `${index * 60}ms`,
+        width: 460,
+        minWidth: 460,
+        flexShrink: 0,
       }}
       {...attributes}
     >
@@ -120,7 +204,7 @@ export default function MachinesPage() {
   }
 
   return (
-    <div style={{ height: '100%', overflowY: 'auto', paddingRight: 4 }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0, color: t.text }}>机器管理</Title>
         <Space>
@@ -150,16 +234,9 @@ export default function MachinesPage() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
             items={machines.map((m) => `mc-${m.id}`)}
-            strategy={rectSortingStrategy}
+            strategy={horizontalListSortingStrategy}
           >
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))',
-                gap: 16,
-                alignItems: 'start',
-              }}
-            >
+            <HorizontalScrollArea>
               {machines.map((m, i) => (
                 <SortableMachineItem
                   key={m.id}
@@ -170,7 +247,7 @@ export default function MachinesPage() {
                   onConnectionChange={handleConnectionChange}
                 />
               ))}
-            </div>
+            </HorizontalScrollArea>
           </SortableContext>
         </DndContext>
       )}
