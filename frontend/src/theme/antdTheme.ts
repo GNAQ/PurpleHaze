@@ -1,117 +1,137 @@
 import type { ThemeConfig } from 'antd'
 import { theme } from 'antd'
-import { ph } from './tokens'
+import { ph, themeTokens } from './tokens'
+import type { ThemeMode } from '../store/themeStore'
 
-export const antdTheme: ThemeConfig = {
-  algorithm: theme.darkAlgorithm,
-  token: {
-    // 主色
-    colorPrimary: ph.purple500,
-    colorSuccess: ph.green500,
-    colorWarning: ph.warning,
-    colorError: ph.error,
-    // 文字
-    colorTextBase: ph.dark.text,
-    colorTextSecondary: ph.dark.textSec,
-    // 边框
-    colorBorder: 'rgba(188,115,173,0.20)',
-    colorBorderSecondary: 'rgba(188,115,173,0.12)',
-    colorSplit: 'rgba(188,115,173,0.10)',
-    // 背景
-    colorBgLayout: ph.dark.bg,
-    colorBgContainer: ph.dark.surface1,
-    colorBgElevated: ph.dark.surface3,
-    colorBgSpotlight: ph.dark.surface2,
-    // 圆角
-    borderRadius: 10,
-    borderRadiusSM: 6,
-    borderRadiusLG: 14,
-    // 链接
-    colorLink: ph.purple400,
-    colorLinkHover: ph.purple300,
-    // 字体
-    fontFamily:
-      "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif",
-    fontFamilyCode: "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, monospace",
-    // 动效
-    motionDurationMid: '0.25s',
-    motionDurationSlow: '0.35s',
-  },
-  components: {
-    Menu: {
-      darkItemBg: 'transparent',
-      darkSubMenuItemBg: 'transparent',
-      darkItemSelectedBg: 'rgba(188,115,173,0.15)',
-      darkItemSelectedColor: ph.purple400,
-      darkItemHoverBg: 'rgba(188,115,173,0.08)',
-      darkItemHoverColor: ph.purple300,
-      itemHeight: 44,
-      iconSize: 16,
-    },
-    Badge: {
-      colorSuccess: ph.green500,
-    },
-    Tag: {
-      colorSuccess: ph.green500,
-      colorSuccessBg: 'rgba(117,193,129,0.12)',
-      colorSuccessBorder: 'rgba(117,193,129,0.25)',
-    },
-    Tabs: {
-      inkBarColor: ph.purple500,
-      itemSelectedColor: ph.purple400,
-      itemHoverColor: ph.purple300,
-      cardBg: ph.dark.surface1,
-    },
-    Input: {
-      activeBorderColor: ph.purple500,
-      hoverBorderColor: ph.purple400,
-      colorBgContainer: ph.dark.surface0,
-    },
-    Select: {
-      optionSelectedBg: 'rgba(188,115,173,0.15)',
-      colorBgContainer: ph.dark.surface0,
-    },
-    Collapse: {
-      headerBg: 'transparent',
-      contentBg: 'transparent',
-    },
-    Divider: {
-      colorSplit: 'rgba(188,115,173,0.12)',
-    },
-    Table: {
-      headerBg: ph.dark.surface0,
-      rowHoverBg: 'rgba(188,115,173,0.06)',
-      colorBgContainer: ph.dark.surface1,
-      headerColor: ph.dark.textSec,
-      borderColor: 'rgba(188,115,173,0.10)',
-    },
-    Card: {
-      colorBgContainer: ph.dark.surface1,
-      colorBorderSecondary: 'rgba(188,115,173,0.15)',
-    },
-    Modal: {
-      contentBg: ph.dark.surface2,
-      headerBg: ph.dark.surface2,
-      titleColor: ph.dark.text,
-    },
-    Button: {
-      primaryShadow: '0 2px 8px rgba(188,115,173,0.30)',
-      defaultBg: ph.dark.surface0,
-      defaultBorderColor: 'rgba(188,115,173,0.20)',
-    },
-    Form: {
-      labelColor: ph.dark.textSec,
-    },
-    Descriptions: {
-      labelBg: 'transparent',
-      contentColor: ph.dark.text,
-      titleColor: ph.dark.text,
-    },
-    Spin: {
+export function getAntdTheme(mode: ThemeMode): ThemeConfig {
+  const t = themeTokens(mode)
+  const isDark = mode === 'dark'
+
+  return {
+    algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    token: {
+      // 主色
       colorPrimary: ph.purple500,
-    },
-    Popconfirm: {
+      colorSuccess: ph.green500,
       colorWarning: ph.warning,
+      colorError: ph.error,
+      // 文字
+      colorTextBase: t.text,
+      colorTextSecondary: t.textSec,
+      // 边框
+      colorBorder: t.border,
+      colorBorderSecondary: isDark ? 'rgba(188,115,173,0.12)' : 'rgba(122,59,110,0.10)',
+      colorSplit: t.divider,
+      // 背景
+      colorBgLayout: t.bg,
+      colorBgContainer: t.surface1,
+      colorBgElevated: t.surface3,
+      colorBgSpotlight: t.surface2,
+      // 圆角
+      borderRadius: 10,
+      borderRadiusSM: 6,
+      borderRadiusLG: 14,
+      // 链接
+      colorLink: isDark ? ph.purple400 : ph.purple600,
+      colorLinkHover: isDark ? ph.purple300 : ph.purple500,
+      // 字体
+      fontFamily:
+        "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif",
+      fontFamilyCode: "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, monospace",
+      // 动效
+      motionDurationMid: '0.25s',
+      motionDurationSlow: '0.35s',
     },
-  },
+    components: {
+      Menu: isDark ? {
+        darkItemBg: 'transparent',
+        darkSubMenuItemBg: 'transparent',
+        darkItemSelectedBg: 'rgba(188,115,173,0.15)',
+        darkItemSelectedColor: ph.purple400,
+        darkItemHoverBg: 'rgba(188,115,173,0.08)',
+        darkItemHoverColor: ph.purple300,
+        itemHeight: 44,
+        iconSize: 16,
+      } : {
+        itemBg: 'transparent',
+        subMenuItemBg: 'transparent',
+        itemSelectedBg: 'rgba(188,115,173,0.12)',
+        itemSelectedColor: ph.purple700,
+        itemHoverBg: 'rgba(188,115,173,0.06)',
+        itemHoverColor: ph.purple600,
+        itemHeight: 44,
+        iconSize: 16,
+      },
+      Badge: {
+        colorSuccess: ph.green500,
+      },
+      Tag: {
+        colorSuccess: ph.green500,
+        colorSuccessBg: isDark ? 'rgba(117,193,129,0.12)' : 'rgba(117,193,129,0.10)',
+        colorSuccessBorder: isDark ? 'rgba(117,193,129,0.25)' : 'rgba(117,193,129,0.20)',
+      },
+      Tabs: {
+        inkBarColor: ph.purple500,
+        itemSelectedColor: isDark ? ph.purple400 : ph.purple700,
+        itemHoverColor: isDark ? ph.purple300 : ph.purple600,
+        cardBg: t.surface1,
+      },
+      Input: {
+        activeBorderColor: ph.purple500,
+        hoverBorderColor: ph.purple400,
+        colorBgContainer: t.surface0,
+      },
+      Select: {
+        optionSelectedBg: isDark ? 'rgba(188,115,173,0.15)' : 'rgba(188,115,173,0.10)',
+        colorBgContainer: t.surface0,
+      },
+      Collapse: {
+        headerBg: 'transparent',
+        contentBg: 'transparent',
+      },
+      Divider: {
+        colorSplit: t.divider,
+      },
+      Table: {
+        headerBg: t.surface0,
+        rowHoverBg: isDark ? 'rgba(188,115,173,0.06)' : 'rgba(188,115,173,0.04)',
+        colorBgContainer: t.surface1,
+        headerColor: t.textSec,
+        borderColor: t.divider,
+      },
+      Card: {
+        colorBgContainer: t.surface1,
+        colorBorderSecondary: t.border,
+      },
+      Modal: {
+        contentBg: t.surface2,
+        headerBg: t.surface2,
+        titleColor: t.text,
+      },
+      Button: {
+        primaryShadow: isDark
+          ? '0 2px 8px rgba(188,115,173,0.30)'
+          : '0 2px 8px rgba(188,115,173,0.20)',
+        defaultBg: t.surface0,
+        defaultBorderColor: t.border,
+      },
+      Form: {
+        labelColor: t.textSec,
+      },
+      Descriptions: {
+        labelBg: 'transparent',
+        contentColor: t.text,
+        titleColor: t.text,
+      },
+      Spin: {
+        colorPrimary: ph.purple500,
+      },
+      Popconfirm: {
+        colorWarning: ph.warning,
+      },
+    },
+  }
 }
+
+/** @deprecated Use getAntdTheme(mode) instead */
+export const antdTheme = getAntdTheme('dark')

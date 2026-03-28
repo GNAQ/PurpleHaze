@@ -13,7 +13,7 @@ import type { Machine, MachineCreate } from '../api/machines'
 import { machinesApi } from '../api/machines'
 import MachineCard from '../components/MachineCard'
 import MachineFormModal from '../components/MachineFormModal'
-import { ph } from '../theme/tokens'
+import { useTheme } from '../theme/useTheme'
 
 const { Title } = Typography
 
@@ -57,6 +57,7 @@ function SortableMachineItem({
 }
 
 export default function MachinesPage() {
+  const { t } = useTheme()
   const [machines, setMachines] = useState<Machine[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -121,7 +122,7 @@ export default function MachinesPage() {
   return (
     <div style={{ height: '100%', overflowY: 'auto', paddingRight: 4 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0, color: ph.dark.text }}>机器管理</Title>
+        <Title level={4} style={{ margin: 0, color: t.text }}>机器管理</Title>
         <Space>
           <Button icon={<ReloadOutlined />} onClick={load}>刷新</Button>
           <Button
@@ -137,7 +138,7 @@ export default function MachinesPage() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>
       ) : machines.length === 0 ? (
-        <Empty description={<span style={{ color: ph.dark.textSec }}>暂无机器</span>} style={{ padding: 80 }}>
+        <Empty description={<span style={{ color: t.textSec }}>暂无机器</span>} style={{ padding: 80 }}>
           <Button
             type="primary" icon={<PlusOutlined />}
             onClick={() => { setEditingMachine(null); setModalOpen(true) }}

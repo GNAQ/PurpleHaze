@@ -14,6 +14,7 @@ import { machinesApi } from '../api/machines'
 import { monitorApi } from '../api/monitor'
 import ResourceBar from './ResourceBar'
 import { ph, utilColor, tempColor } from '../theme/tokens'
+import { useTheme } from '../theme/useTheme'
 
 const { Text, Title } = Typography
 
@@ -52,14 +53,15 @@ function RingGauge({ pct, size = 44, stroke = 3.5, color }: { pct: number; size?
 
 /** GPU 总览格 — ring gauge + compact bars */
 function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
+  const { t } = useTheme()
   const util = gpu.utilization
   const vramPct = (gpu.memory_used_mb / gpu.memory_total_mb) * 100
   const uColor = utilColor(util)
 
   return (
     <div style={{
-      background: ph.dark.surface2,
-      border: `1px solid ${ph.glass.border}`,
+      background: t.surface2,
+      border: `1px solid ${t.glassBorder}`,
       borderRadius: 8,
       padding: '8px 10px',
       transition: 'border-color 0.2s',
@@ -91,8 +93,8 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
           {/* VRAM bar */}
           <div style={{ marginBottom: 3 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
-              <span style={{ fontSize: 9, color: ph.dark.textTer }}>VRAM</span>
-              <span className="ph-mono" style={{ fontSize: 9, color: ph.dark.textSec }}>{fmtMB(gpu.memory_used_mb)}</span>
+              <span style={{ fontSize: 9, color: t.textTer }}>VRAM</span>
+              <span className="ph-mono" style={{ fontSize: 9, color: t.textSec }}>{fmtMB(gpu.memory_used_mb)}</span>
             </div>
             <div style={{ height: 3, borderRadius: 2, background: 'rgba(188,115,173,0.08)', position: 'relative' }}>
               <div style={{ width: `${Math.min(100, vramPct)}%`, height: '100%', background: utilColor(vramPct), borderRadius: 2, transition: 'width 0.5s ease' }} />
@@ -109,8 +111,8 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
           {gpu.power_draw_w != null && gpu.power_limit_w != null && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
-                <span style={{ fontSize: 9, color: ph.dark.textTer }}>PWR</span>
-                <span className="ph-mono" style={{ fontSize: 9, color: ph.dark.textSec }}>{gpu.power_draw_w.toFixed(0)}W</span>
+                <span style={{ fontSize: 9, color: t.textTer }}>PWR</span>
+                <span className="ph-mono" style={{ fontSize: 9, color: t.textSec }}>{gpu.power_draw_w.toFixed(0)}W</span>
               </div>
               <div style={{ height: 3, borderRadius: 2, background: 'rgba(188,115,173,0.08)', position: 'relative' }}>
                 <div style={{
@@ -129,16 +131,17 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
 
 /** GPU 详情区 */
 function GpuDetail({ gpu }: { gpu: GpuInfo }) {
+  const { t } = useTheme()
   return (
     <div style={{
-      background: ph.dark.surface2,
-      border: `1px solid ${ph.glass.border}`,
+      background: t.surface2,
+      border: `1px solid ${t.glassBorder}`,
       borderRadius: 8, padding: '10px 12px', marginBottom: 8,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <ThunderboltOutlined style={{ fontSize: 12, color: ph.purple500 }} />
         <Text strong style={{ fontSize: 12, color: ph.purple400 }}>GPU {gpu.index}</Text>
-        <Text style={{ fontSize: 11, color: ph.dark.textSec }}>{gpu.name}</Text>
+        <Text style={{ fontSize: 11, color: t.textSec }}>{gpu.name}</Text>
         {gpu.temperature_c != null && (
           <span className="ph-mono" style={{
             fontSize: 10, fontWeight: 600, marginLeft: 'auto',
@@ -164,15 +167,15 @@ function GpuDetail({ gpu }: { gpu: GpuInfo }) {
         />
       )}
       {gpu.processes.length > 0 ? (
-        <div style={{ marginTop: 8, borderRadius: 6, overflow: 'hidden', border: `1px solid ${ph.glass.border}` }}>
+        <div style={{ marginTop: 8, borderRadius: 6, overflow: 'hidden', border: `1px solid ${t.glassBorder}` }}>
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 60px 44px 42px 54px 66px',
-            padding: '3px 8px', background: ph.dark.surface0,
-            borderBottom: `1px solid ${ph.glass.border}`, gap: 4,
+            padding: '3px 8px', background: t.surface0,
+            borderBottom: `1px solid ${t.glassBorder}`, gap: 4,
           }}>
             {['进程名', '用户', 'PID', 'CPU', '内存', '显存'].map((col) => (
-              <span key={col} className="ph-mono" style={{ fontSize: 9, color: ph.dark.textTer, fontWeight: 600, lineHeight: '16px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <span key={col} className="ph-mono" style={{ fontSize: 9, color: t.textTer, fontWeight: 600, lineHeight: '16px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 {col}
               </span>
             ))}
@@ -183,7 +186,7 @@ function GpuDetail({ gpu }: { gpu: GpuInfo }) {
               title={p.cmdline
                 ? <div style={{ wordBreak: 'break-all', maxWidth: 340, fontSize: 12 }}><b>CMD:</b> {p.cmdline}</div>
                 : undefined}
-              color={ph.dark.surface2}
+              color={t.surface2}
             >
               <div style={{
                 display: 'grid',
@@ -193,30 +196,31 @@ function GpuDetail({ gpu }: { gpu: GpuInfo }) {
                 borderBottom: rowIdx < gpu.processes.length - 1 ? `1px solid rgba(188,115,173,0.06)` : 'none',
                 cursor: p.cmdline ? 'help' : 'default', alignItems: 'center',
               }}>
-                <span className="ph-mono" style={{ fontSize: 11, color: ph.dark.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span className="ph-mono" style={{ fontSize: 11, color: t.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.name || `PID ${p.pid}`}
                 </span>
-                <span style={{ fontSize: 11, color: ph.dark.textSec, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 11, color: t.textSec, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.username || '—'}
                 </span>
-                <span className="ph-mono" style={{ fontSize: 11, color: ph.dark.textTer }}>{p.pid}</span>
+                <span className="ph-mono" style={{ fontSize: 11, color: t.textTer }}>{p.pid}</span>
                 <span className="ph-mono" style={{ fontSize: 11, color: p.cpu_percent > 50 ? ph.error : p.cpu_percent > 20 ? ph.warning : ph.green500 }}>
                   {p.cpu_percent.toFixed(1)}%
                 </span>
-                <span className="ph-mono" style={{ fontSize: 11, color: ph.dark.textSec }}>{fmtMB(p.memory_mb)}</span>
+                <span className="ph-mono" style={{ fontSize: 11, color: t.textSec }}>{fmtMB(p.memory_mb)}</span>
                 <span className="ph-mono" style={{ fontSize: 11, color: ph.purple400, fontWeight: 500 }}>{fmtMB(p.used_memory_mb)}</span>
               </div>
             </Tooltip>
           ))}
         </div>
       ) : (
-        <Text style={{ fontSize: 11, display: 'block', marginTop: 6, color: ph.dark.textTer }}>暂无 GPU 进程</Text>
+        <Text style={{ fontSize: 11, display: 'block', marginTop: 6, color: t.textTer }}>暂无 GPU 进程</Text>
       )}
     </div>
   )
 }
 
 export default function MachineCard({ machine, onEdit, onDeleted, onConnectionChange, dragHandleRef, dragListeners }: Props) {
+  const { t, isDark } = useTheme()
   const [snapshot, setSnapshot] = useState<ResourceSnapshot | null>(null)
   const [connecting, setConnecting] = useState(false)
   const [editingInterval, setEditingInterval] = useState(false)
@@ -306,8 +310,8 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
       style={{
         borderRadius: 14,
         boxShadow: connected ? '0 4px 24px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.3)',
-        border: connected ? `1px solid rgba(117,193,129,0.20)` : `1px solid ${ph.glass.border}`,
-        borderLeft: connected ? `3px solid ${ph.green500}` : `1px solid ${ph.glass.border}`,
+        border: connected ? `1px solid rgba(117,193,129,0.20)` : `1px solid ${t.glassBorder}`,
+        borderLeft: connected ? `3px solid ${ph.green500}` : `1px solid ${t.glassBorder}`,
         overflow: 'hidden',
         transition: 'border-color 0.3s, box-shadow 0.3s',
       }}
@@ -336,7 +340,7 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
 
       <div style={{ padding: 16 }}>
         {/* ── 头部 ── */}
-        <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${ph.dark.divider}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${t.divider}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0, flex: 1 }}>
               <div style={{
@@ -347,14 +351,14 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
                 <DesktopOutlined style={{ fontSize: 17, color: ph.purple400 }} />
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <Title level={5} style={{ margin: 0, lineHeight: 1.25, wordBreak: 'break-word', color: ph.dark.text }}>{machine.name}</Title>
-                <Text className="ph-mono" style={{ fontSize: 11, display: 'block', marginTop: 2, wordBreak: 'break-all', color: ph.dark.textSec }}>
+                <Title level={5} style={{ margin: 0, lineHeight: 1.25, wordBreak: 'break-word', color: t.text }}>{machine.name}</Title>
+                <Text className="ph-mono" style={{ fontSize: 11, display: 'block', marginTop: 2, wordBreak: 'break-all', color: t.textSec }}>
                   {machine.is_local
                     ? 'localhost'
                     : `${machine.ssh_username}@${machine.ssh_host}:${machine.ssh_port}`}
                 </Text>
                 {!machine.is_local && machine.proxy_jump_host && (
-                  <Text className="ph-mono" style={{ fontSize: 10, display: 'block', marginTop: 2, color: ph.dark.textTer }}>
+                  <Text className="ph-mono" style={{ fontSize: 10, display: 'block', marginTop: 2, color: t.textTer }}>
                     via {machine.proxy_jump_username}@{machine.proxy_jump_host}:{machine.proxy_jump_port}
                   </Text>
                 )}
@@ -362,7 +366,7 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
             </div>
             <Badge
               status={connected ? 'success' : 'default'}
-              text={<Text style={{ fontSize: 11, fontWeight: 500, color: connected ? ph.green500 : ph.dark.textTer }}>{connected ? 'ONLINE' : 'OFFLINE'}</Text>}
+              text={<Text style={{ fontSize: 11, fontWeight: 500, color: connected ? ph.green500 : t.textTer }}>{connected ? 'ONLINE' : 'OFFLINE'}</Text>}
             />
           </div>
 
@@ -374,21 +378,21 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
               border: `1px solid rgba(188,115,173,0.12)`,
               minHeight: 28,
             }}>
-              <Text className="ph-mono" style={{ fontSize: 10, color: ph.dark.textTer }}>POLL</Text>
+              <Text className="ph-mono" style={{ fontSize: 10, color: t.textTer }}>POLL</Text>
               {editingInterval ? (
                 <>
                   <InputNumber size="small" min={1} max={3600} value={intervalValue}
                     onChange={(v) => v && setIntervalValue(v)} style={{ width: 64 }} />
-                  <Text style={{ fontSize: 10, color: ph.dark.textTer }}>s</Text>
+                  <Text style={{ fontSize: 10, color: t.textTer }}>s</Text>
                   <Button size="small" type="link" onClick={saveInterval} style={{ padding: '0 2px', height: 18, fontSize: 11 }}>OK</Button>
-                  <Button size="small" type="text" onClick={() => setEditingInterval(false)} style={{ padding: '0 2px', height: 18, fontSize: 11, color: ph.dark.textTer }}>×</Button>
+                  <Button size="small" type="text" onClick={() => setEditingInterval(false)} style={{ padding: '0 2px', height: 18, fontSize: 11, color: t.textTer }}>×</Button>
                 </>
               ) : (
                 <>
-                  <Text className="ph-mono" style={{ fontSize: 11, fontWeight: 600, color: ph.dark.text }}>{intervalValue}s</Text>
+                  <Text className="ph-mono" style={{ fontSize: 11, fontWeight: 600, color: t.text }}>{intervalValue}s</Text>
                   <Button type="text" size="small" icon={<EditOutlined />}
                     onClick={() => setEditingInterval(true)}
-                    style={{ padding: 0, width: 16, height: 16, minWidth: 16, color: ph.dark.textTer }} />
+                    style={{ padding: 0, width: 16, height: 16, minWidth: 16, color: t.textTer }} />
                 </>
               )}
             </div>
@@ -432,7 +436,7 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
 
             {snapshot.gpus.length > 0 && (
               <>
-                <Divider style={{ margin: '10px 0 8px', borderColor: ph.dark.divider }}>
+                <Divider style={{ margin: '10px 0 8px', borderColor: t.divider }}>
                   <Text className="ph-mono" style={{ fontSize: 10, color: ph.purple500, fontWeight: 600, letterSpacing: 1 }}>
                     GPU × {snapshot.gpus.length}
                   </Text>
@@ -460,9 +464,9 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
         ) : connected && snapshot?.error ? (
           <Text style={{ fontSize: 12, color: ph.error }}>采集失败：{snapshot.error}</Text>
         ) : !connected ? (
-          <Text style={{ fontSize: 12, color: ph.dark.textTer }}>未连接，无法获取资源信息</Text>
+          <Text style={{ fontSize: 12, color: t.textTer }}>未连接，无法获取资源信息</Text>
         ) : (
-          <Text style={{ fontSize: 12, color: ph.dark.textTer }}>正在获取资源信息...</Text>
+          <Text style={{ fontSize: 12, color: t.textTer }}>正在获取资源信息...</Text>
         )}
       </div>
     </div>

@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons'
 import { tasksApi, FsItem } from '../api/tasks'
 import { ph } from '../theme/tokens'
+import { useTheme } from '../theme/useTheme'
 
 const { Text } = Typography
 
@@ -35,6 +36,7 @@ export default function PathPickerModal({
   const [items, setItems] = useState<FsItem[]>([])
   const [loading, setLoading] = useState(false)
   const [inputPath, setInputPath] = useState(initialPath)
+  const { t } = useTheme()
 
   useEffect(() => {
     if (open) {
@@ -117,7 +119,7 @@ export default function PathPickerModal({
       </Space>
 
       {/* 目录列表 */}
-      <div style={{ height: 320, overflow: 'auto', border: `1px solid ${ph.dark.border}`, borderRadius: 6 }}>
+      <div style={{ height: 320, overflow: 'auto', border: `1px solid ${t.border}`, borderRadius: 6 }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <Spin />
@@ -143,7 +145,7 @@ export default function PathPickerModal({
                 <Space>
                   {item.is_dir
                     ? <FolderOutlined style={{ color: ph.warning }} />
-                    : <FileOutlined style={{ color: ph.dark.textTer }} />
+                    : <FileOutlined style={{ color: t.textTer }} />
                   }
                   <Text style={{ fontSize: 13 }}>{item.name}</Text>
                 </Space>

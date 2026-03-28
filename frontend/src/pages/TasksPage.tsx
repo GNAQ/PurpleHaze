@@ -23,18 +23,22 @@ import { tasksApi, Pipeline, Task, TaskStatus } from '../api/tasks'
 import TaskCreateModal from '../components/TaskCreateModal'
 import TaskBatchModal from '../components/TaskBatchModal'
 import { ph } from '../theme/tokens'
+import { useTheme } from '../theme/useTheme'
+import type { ThemeTokens } from '../theme/tokens'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
 
 const { Title, Text } = Typography
 
-const STATUS_CONFIG: Record<TaskStatus, { color: string; label: string; dotColor: string; pillClass: string }> = {
-  waiting:   { color: 'default',    label: '等待中', dotColor: ph.dark.textTer, pillClass: 'ph-status-waiting' },
-  running:   { color: 'processing', label: '运行中', dotColor: ph.green500,    pillClass: 'ph-status-running' },
-  completed: { color: 'success',    label: '已完成', dotColor: ph.green500,    pillClass: 'ph-status-completed' },
-  failed:    { color: 'error',      label: '失败',   dotColor: ph.error,       pillClass: 'ph-status-failed' },
-  cancelled: { color: 'warning',    label: '已取消', dotColor: ph.warning,     pillClass: 'ph-status-cancelled' },
+function getStatusConfig(t: ThemeTokens): Record<TaskStatus, { color: string; label: string; dotColor: string; pillClass: string }> {
+  return {
+    waiting:   { color: 'default',    label: '等待中', dotColor: t.textTer,   pillClass: 'ph-status-waiting' },
+    running:   { color: 'processing', label: '运行中', dotColor: ph.green500, pillClass: 'ph-status-running' },
+    completed: { color: 'success',    label: '已完成', dotColor: ph.green500, pillClass: 'ph-status-completed' },
+    failed:    { color: 'error',      label: '失败',   dotColor: ph.error,    pillClass: 'ph-status-failed' },
+    cancelled: { color: 'warning',    label: '已取消', dotColor: ph.warning,  pillClass: 'ph-status-cancelled' },
+  }
 }
 
 function SortableItem({
@@ -59,6 +63,9 @@ function SortableItem({
 }
 
 export default function TasksPage() {
+  const { t, isDark } = useTheme()
+  const STATUS_CONFIG = getStatusConfig(t)
+
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
   const [orphanTasks, setOrphanTasks] = useState<Task[]>([])
   const [machines, setMachines] = useState<Machine[]>([])
@@ -265,8 +272,8 @@ export default function TasksPage() {
         className={isRunning ? 'ph-running-glow' : undefined}
         style={{
           marginBottom: 6,
-          background: ph.dark.surface2,
-          border: `1px solid ${isRunning ? 'rgba(117,193,129,0.25)' : ph.glass.border}`,
+          background: t.surface2,
+          border: `1px solid ${isRunning ? 'rgba(117,193,129,0.25)' : t.glassBorder}`,
           borderRadius: 8,
           padding: '8px 12px',
           transition: 'border-color 0.3s',
@@ -293,7 +300,7 @@ export default function TasksPage() {
               </Tooltip>
             )}
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dotColor, flexShrink: 0 }} />
-            <Text strong style={{ fontSize: 13, color: ph.dark.text }}>{task.name}</Text>
+            <Text strong style={{ fontSize: 13, color: t.text }}>{task.name}</Text>
             {elapsed && (
               <Text className="ph-mono" style={{ fontSize: 10, color: ph.green400 }}>
                 {elapsed}
@@ -331,7 +338,7 @@ export default function TasksPage() {
         </div>
 
         <div style={{ marginTop: 3 }}>
-          <Text className="ph-mono" style={{ fontSize: 11, color: ph.dark.textCode, wordBreak: 'break-all' }}>{cmdPreview}</Text>
+          <Text className="ph-mono" style={{ fontSize: 11, color: t.textCode, wordBreak: 'break-all' }}>{cmdPreview}</Text>
         </div>
 
         <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -339,7 +346,7 @@ export default function TasksPage() {
             {task.status === 'running' && <span className="ph-running-dot" />}
             {sc.label}
           </span>
-          <Text style={{ fontSize: 11, color: ph.dark.textSec }}>{getMachineName(task.machine_id)}</Text>
+          <Text style={{ fontSize: 11, color: t.textSec }}>{getMachineName(task.machine_id)}</Text>
           {task.assigned_gpu_ids && task.assigned_gpu_ids.length > 0 && (
             <Tag color="purple" style={{ margin: 0, fontSize: 10 }}>
               GPU {task.assigned_gpu_ids.join(',')}
@@ -351,12 +358,12 @@ export default function TasksPage() {
           ghost size="small"
           items={[{
             key: '1',
-            label: <Text style={{ fontSize: 11, color: ph.dark.textTer }}>详情</Text>,
+            label: <Text style={{ fontSize: 11, color: t.textTer }}>详情</Text>,
             children: (
               <Descriptions size="small" column={1} style={{ fontSize: 11 }}>
                 {config.work_dir && (
                   <Descriptions.Item label="目录">
-                    <Text className="ph-mono" style={{ fontSize: 11, color: ph.dark.textSec }}>{config.work_dir}</Text>
+                    <Text className="ph-mono" style={{ fontSize: 11, color: t.textSec }}>{config.work_dir}</Text>
                   </Descriptions.Item>
                 )}
                 {duration && <Descriptions.Item label="耗时">{duration}</Descriptions.Item>}
@@ -389,7 +396,7 @@ export default function TasksPage() {
       {/* 顶部工具栏 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <Space>
-          <Title level={5} style={{ margin: 0, color: ph.dark.text }}>任务队列</Title>
+          <Title level={5} style={{ margin: 0, color: t.text }}>任务队列</Title>
           <Tooltip title="刷新">
             <Button
               icon={refreshing ? <LoadingOutlined spin /> : <ReloadOutlined />}
@@ -415,7 +422,7 @@ export default function TasksPage() {
           <div style={{ flex: 1, display: 'flex', gap: 12, overflowX: 'auto', overflowY: 'hidden', paddingBottom: 8 }}>
             {pipelines.length === 0 && !addingPipelineColumn && (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Empty description={<span style={{ color: ph.dark.textSec }}>暂无流水线</span>} />
+                <Empty description={<span style={{ color: t.textSec }}>暂无流水线</span>} />
               </div>
             )}
 
@@ -462,7 +469,7 @@ export default function TasksPage() {
                               <Button size="small" onClick={() => setRenamingId(null)}>取消</Button>
                             </Space.Compact>
                           ) : (
-                            <Text strong style={{ fontSize: 14, color: ph.dark.text }}>{pipeline.name}</Text>
+                            <Text strong style={{ fontSize: 14, color: t.text }}>{pipeline.name}</Text>
                           )}
                         </Space>
                         <Space size={2}>
@@ -502,7 +509,7 @@ export default function TasksPage() {
                               >
                                 {activeTasks.length === 0 ? (
                                   <div style={{
-                                    textAlign: 'center', padding: '28px 0', color: ph.dark.textTer,
+                                    textAlign: 'center', padding: '28px 0', color: t.textTer,
                                     border: `1px dashed rgba(188,115,173,0.15)`, borderRadius: 8, margin: '8px 0',
                                   }}>
                                     <div className="ph-mono" style={{ fontSize: 20, opacity: 0.3, marginBottom: 4, letterSpacing: 2 }}>{'[ ]'}</div>
@@ -525,10 +532,10 @@ export default function TasksPage() {
                                 <>
                                   <div style={{
                                     margin: '8px 0 6px', paddingTop: 8,
-                                    borderTop: `1px solid ${ph.dark.divider}`,
+                                    borderTop: `1px solid ${t.divider}`,
                                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                   }}>
-                                    <Text className="ph-mono" style={{ fontSize: 11, color: ph.dark.textTer }}>
+                                    <Text className="ph-mono" style={{ fontSize: 11, color: t.textTer }}>
                                       ARCHIVED {visibleArchived}/{archivedTasks.length}
                                     </Text>
                                     <Button
@@ -563,7 +570,7 @@ export default function TasksPage() {
                   borderColor: 'rgba(155,148,163,0.15)',
                 }}
               >
-                <Text className="ph-mono" strong style={{ fontSize: 13, marginBottom: 10, display: 'block', color: ph.dark.textSec }}>
+                <Text className="ph-mono" strong style={{ fontSize: 13, marginBottom: 10, display: 'block', color: t.textSec }}>
                   UNASSIGNED
                 </Text>
                 <div style={{ flex: 1, overflowY: 'auto' }}>

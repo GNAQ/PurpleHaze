@@ -1,16 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ConfigProvider, Spin } from 'antd'
 import { useAuthStore } from './store/authStore'
-import { antdTheme } from './theme/antdTheme'
+import { useThemeStore } from './store/themeStore'
+import { getAntdTheme } from './theme/antdTheme'
 import { authApi } from './api/auth'
 import LoginPage from './pages/LoginPage'
 import AppLayout from './components/AppLayout'
 
 export default function App() {
   const { isAuthenticated } = useAuthStore()
+  const mode = useThemeStore((s) => s.mode)
+  const antdTheme = useMemo(() => getAntdTheme(mode), [mode])
   const [isSetup, setIsSetup] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Sync theme class on <html> for CSS overrides
+  useEffect(() => {
+    document.documentElement.dataset.theme = mode
+  }, [mode])
 
   useEffect(() => {
     authApi

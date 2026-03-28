@@ -18,6 +18,7 @@ import {
 import PathPickerModal from './PathPickerModal'
 import GpuConditionDialog from './GpuConditionDialog'
 import { ph } from '../theme/tokens'
+import { useTheme } from '../theme/useTheme'
 
 interface Props {
   open: boolean
@@ -183,6 +184,7 @@ export default function TaskCreateModal({
   const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([])
   // GPU 数量（用于抢卡选卡，跟随所选机器）
   const [gpuCount, setGpuCount] = useState(0)
+  const { t } = useTheme()
 
   // 弹窗状态
   const [pathPickerOpen, setPathPickerOpen] = useState(false)
@@ -444,10 +446,10 @@ export default function TaskCreateModal({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div
             style={{
-              border: `1px solid ${ph.dark.border}`,
+              border: `1px solid ${t.border}`,
               borderRadius: 10,
               padding: 12,
-              background: ph.dark.surface0,
+              background: t.surface0,
             }}
           >
             <Space direction="vertical" size={8} style={{ width: '100%' }}>
@@ -645,11 +647,11 @@ export default function TaskCreateModal({
                   children: (
                     <>
                       <div style={{
-                        border: `1px dashed ${ph.dark.border}`,
+                        border: `1px dashed ${t.border}`,
                         borderRadius: 8,
                         padding: '10px 12px',
                         marginBottom: 16,
-                        background: ph.dark.surface0,
+                        background: t.surface0,
                       }}>
                         <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
                           粘贴完整命令，自动识别工作目录、环境变量、命令和参数

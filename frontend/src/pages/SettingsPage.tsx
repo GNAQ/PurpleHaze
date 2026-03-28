@@ -5,11 +5,12 @@ import {
 import { LockOutlined, SaveOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { authApi, type SettingItem } from '../api/auth'
 import { tasksApi, type CondaEnv } from '../api/tasks'
-import { ph } from '../theme/tokens'
+import { useTheme } from '../theme/useTheme'
 
 const { Title, Text } = Typography
 
 export default function SettingsPage() {
+  const { t } = useTheme()
   const [pwdForm] = Form.useForm()
   const [pwdLoading, setPwdLoading] = useState(false)
   const [settings, setSettings] = useState<SettingItem[]>([])
@@ -79,7 +80,7 @@ export default function SettingsPage() {
 
   return (
     <div style={{ maxWidth: 640 }}>
-      <Title level={4} style={{ margin: 0, marginBottom: 20, color: ph.dark.text }}>设置</Title>
+      <Title level={4} style={{ margin: 0, marginBottom: 20, color: t.text }}>设置</Title>
 
       {/* 修改密码 */}
       <Card title="修改密码" style={{ marginBottom: 16 }} className="ph-glass-card">
@@ -104,14 +105,14 @@ export default function SettingsPage() {
         {settingsLoading ? (
           <Spin />
         ) : settings.length === 0 ? (
-          <Text style={{ color: ph.dark.textSec }}>暂无可配置项</Text>
+          <Text style={{ color: t.textSec }}>暂无可配置项</Text>
         ) : (
           <Space direction="vertical" style={{ width: '100%' }}>
             {settings.map((item, idx) => (
               <div key={item.key}>
-                <Text strong style={{ fontSize: 13, color: ph.dark.text }}>{item.key}</Text>
+                <Text strong style={{ fontSize: 13, color: t.text }}>{item.key}</Text>
                 {item.description && (
-                  <Text style={{ fontSize: 12, marginLeft: 8, color: ph.dark.textSec }}>{item.description}</Text>
+                  <Text style={{ fontSize: 12, marginLeft: 8, color: t.textSec }}>{item.description}</Text>
                 )}
                 <Input
                   value={item.value}
@@ -182,7 +183,7 @@ export default function SettingsPage() {
                 >
                   <List.Item.Meta
                     title={env.name}
-                    description={env.path ? env.path : <span style={{ color: ph.dark.textTer, fontStyle: 'italic' }}>conda activate {env.name}</span>}
+                    description={env.path ? env.path : <span style={{ color: t.textTer, fontStyle: 'italic' }}>conda activate {env.name}</span>}
                   />
                 </List.Item>
               )}

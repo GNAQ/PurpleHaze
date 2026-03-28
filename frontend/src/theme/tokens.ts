@@ -5,8 +5,10 @@
  *   紫色  #bc73ad  — 低饱和兰花紫
  *   绿色  #75c181  — 柔和鼠尾草绿
  *
- * 深色主题：以 purple900 为基底，卡片/面板用半透明磨砂玻璃效果
+ * 支持深色/浅色主题，通过 themeTokens(mode) 获取当前主题的语义色
  */
+
+import type { ThemeMode } from '../store/themeStore'
 
 export const ph = {
   // ── 紫色族 ──────────────────────────────────────────────────────────────────
@@ -70,11 +72,45 @@ export const ph = {
     textCode:  '#c9b8d8',
   },
 
+  // ── 浅色主题专用 ────────────────────────────────────────────────────────────
+  light: {
+    /** 页面最底层背景 */
+    bg:        '#f6f3f9',
+    /** 侧边栏/输入框背景 */
+    surface0:  '#eee9f3',
+    /** 卡片表面 */
+    surface1:  '#ffffff',
+    /** 悬浮/激活态 */
+    surface2:  '#f0ecf5',
+    /** 弹窗/浮层 */
+    surface3:  '#ffffff',
+    /** 边框 */
+    border:    'rgba(122,59,110,0.15)',
+    /** 分割线 */
+    divider:   'rgba(122,59,110,0.10)',
+    /** 主文本 */
+    text:      '#2a2035',
+    /** 二级文本 */
+    textSec:   '#6d6179',
+    /** 三级文本 */
+    textTer:   '#9b94a3',
+    /** 代码/数据文本 */
+    textCode:  '#5a3d6e',
+  },
+
   // ── 玻璃效果 ────────────────────────────────────────────────────────────────
   glass: {
     bg:       'rgba(22,17,33,0.72)',
     bgHover:  'rgba(30,23,44,0.82)',
     border:   'rgba(188,115,173,0.18)',
+    blur:     '16px',
+    blurHeavy:'24px',
+  },
+
+  glassLight: {
+    bg:       'rgba(255,255,255,0.72)',
+    bgHover:  'rgba(255,255,255,0.85)',
+    border:   'rgba(122,59,110,0.12)',
     blur:     '16px',
     blurHeavy:'24px',
   },
@@ -86,7 +122,76 @@ export const ph = {
     error:   '0 0 20px rgba(224,83,99,0.25)',
     subtle:  '0 0 12px rgba(188,115,173,0.12)',
   },
+
+  glowLight: {
+    purple:  '0 4px 16px rgba(188,115,173,0.15)',
+    green:   '0 4px 16px rgba(117,193,129,0.15)',
+    error:   '0 4px 16px rgba(224,83,99,0.15)',
+    subtle:  '0 2px 8px rgba(188,115,173,0.08)',
+  },
 } as const
+
+/** Resolved semantic theme tokens — use via useThemeTokens() hook or themeTokens(mode) */
+export interface ThemeTokens {
+  bg: string
+  surface0: string
+  surface1: string
+  surface2: string
+  surface3: string
+  border: string
+  divider: string
+  text: string
+  textSec: string
+  textTer: string
+  textCode: string
+  glassBg: string
+  glassBgHover: string
+  glassBorder: string
+  glassBlur: string
+  glowPurple: string
+  glowGreen: string
+  glowError: string
+  glowSubtle: string
+  /** Hover tint for interactive elements */
+  hoverTint: string
+  /** Active/selected tint */
+  activeTint: string
+  /** Header/sidebar background */
+  chromeAlpha: string
+}
+
+export function themeTokens(mode: ThemeMode): ThemeTokens {
+  if (mode === 'dark') {
+    return {
+      ...ph.dark,
+      glassBg: ph.glass.bg,
+      glassBgHover: ph.glass.bgHover,
+      glassBorder: ph.glass.border,
+      glassBlur: ph.glass.blur,
+      glowPurple: ph.glow.purple,
+      glowGreen: ph.glow.green,
+      glowError: ph.glow.error,
+      glowSubtle: ph.glow.subtle,
+      hoverTint: 'rgba(188,115,173,0.06)',
+      activeTint: 'rgba(188,115,173,0.10)',
+      chromeAlpha: 'rgba(11,8,17,0.88)',
+    }
+  }
+  return {
+    ...ph.light,
+    glassBg: ph.glassLight.bg,
+    glassBgHover: ph.glassLight.bgHover,
+    glassBorder: ph.glassLight.border,
+    glassBlur: ph.glassLight.blur,
+    glowPurple: ph.glowLight.purple,
+    glowGreen: ph.glowLight.green,
+    glowError: ph.glowLight.error,
+    glowSubtle: ph.glowLight.subtle,
+    hoverTint: 'rgba(122,59,110,0.05)',
+    activeTint: 'rgba(122,59,110,0.08)',
+    chromeAlpha: 'rgba(255,255,255,0.85)',
+  }
+}
 
 export type PhColor = string
 

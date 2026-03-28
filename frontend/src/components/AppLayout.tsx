@@ -8,11 +8,14 @@ import {
   SettingOutlined,
   LogoutOutlined,
   MenuOutlined,
+  SunOutlined,
+  MoonOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../store/authStore'
 import { useTasksStore } from '../store/tasksStore'
 import { tasksApi } from '../api/tasks'
 import { ph } from '../theme/tokens'
+import { useTheme } from '../theme/useTheme'
 import MachinesPage from '../pages/MachinesPage'
 import TasksPage from '../pages/TasksPage'
 import HistoryPage from '../pages/HistoryPage'
@@ -34,6 +37,7 @@ const HEADER_HEIGHT = 48
 export default function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t, isDark, toggle } = useTheme()
   const logout = useAuthStore((s) => s.logout)
   const { runningCount, setRunningCount } = useTasksStore()
   const [sidebarHover, setSidebarHover] = useState(false)
@@ -90,17 +94,17 @@ export default function AppLayout() {
   if (runningCount > 0) statusParts.push(`${runningCount} running`)
 
   return (
-    <div style={{ height: '100vh', overflow: 'hidden', background: ph.dark.bg, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', overflow: 'hidden', background: t.bg, display: 'flex', flexDirection: 'column' }}>
       {/* ── Header ── */}
       <header
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'rgba(11,8,17,0.88)',
+          background: t.chromeAlpha,
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          borderBottom: `1px solid ${ph.glass.border}`,
+          borderBottom: `1px solid ${t.glassBorder}`,
           padding: '0 20px',
           height: HEADER_HEIGHT,
           flexShrink: 0,
@@ -144,10 +148,10 @@ export default function AppLayout() {
             style={{
               width: sidebarWidth,
               minWidth: sidebarWidth,
-              background: 'rgba(11,8,17,0.65)',
+              background: isDark ? 'rgba(11,8,17,0.65)' : 'rgba(255,255,255,0.65)',
               backdropFilter: 'blur(16px)',
               WebkitBackdropFilter: 'blur(16px)',
-              borderRight: `1px solid ${ph.glass.border}`,
+              borderRight: `1px solid ${t.glassBorder}`,
               display: 'flex',
               flexDirection: 'column',
               paddingTop: 12,
@@ -172,14 +176,14 @@ export default function AppLayout() {
                         height: 44,
                         cursor: 'pointer',
                         position: 'relative',
-                        color: active ? ph.purple400 : ph.dark.textSec,
-                        background: active ? 'rgba(188,115,173,0.10)' : 'transparent',
+                        color: active ? ph.purple400 : t.textSec,
+                        background: active ? t.activeTint : 'transparent',
                         borderLeft: active ? `3px solid ${ph.purple500}` : '3px solid transparent',
                         transition: 'all 0.2s ease',
                         fontSize: 16,
                       }}
                       onMouseEnter={(e) => {
-                        if (!active) e.currentTarget.style.background = 'rgba(188,115,173,0.06)'
+                        if (!active) e.currentTarget.style.background = t.hoverTint
                       }}
                       onMouseLeave={(e) => {
                         if (!active) e.currentTarget.style.background = 'transparent'
@@ -210,6 +214,33 @@ export default function AppLayout() {
               })}
             </div>
 
+            {/* Theme toggle */}
+            <Tooltip title={!sidebarHover ? (isDark ? '浅色模式' : '深色模式') : undefined} placement="right">
+              <div
+                onClick={toggle}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '0 16px',
+                  height: 44,
+                  cursor: 'pointer',
+                  color: t.textTer,
+                  transition: 'color 0.2s',
+                  marginTop: 'auto',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = ph.purple400 }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = t.textTer }}
+              >
+                {isDark
+                  ? <SunOutlined style={{ fontSize: 16, flexShrink: 0 }} />
+                  : <MoonOutlined style={{ fontSize: 16, flexShrink: 0 }} />}
+                <span className="ph-nav-label" style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                  {isDark ? '浅色模式' : '深色模式'}
+                </span>
+              </div>
+            </Tooltip>
+
             {/* Logout at bottom */}
             <Tooltip title={!sidebarHover ? '退出' : undefined} placement="right">
               <div
@@ -221,13 +252,13 @@ export default function AppLayout() {
                   padding: '0 16px',
                   height: 44,
                   cursor: 'pointer',
-                  color: ph.dark.textTer,
-                  borderTop: `1px solid ${ph.dark.divider}`,
+                  color: t.textTer,
+                  borderTop: `1px solid ${t.divider}`,
                   transition: 'color 0.2s',
                   marginTop: 'auto',
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = ph.error }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = ph.dark.textTer }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = t.textTer }}
               >
                 <LogoutOutlined style={{ fontSize: 16, flexShrink: 0 }} />
                 <span className="ph-nav-label" style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>
@@ -246,7 +277,7 @@ export default function AppLayout() {
           width={200}
           styles={{
             header: { display: 'none' },
-            body: { padding: 0, background: ph.dark.surface0 },
+            body: { padding: 0, background: t.surface0 },
           }}
         >
           <div style={{ padding: '16px 0 8px', textAlign: 'center' }}>
@@ -256,7 +287,7 @@ export default function AppLayout() {
             mode="inline"
             selectedKeys={[selectedKey]}
             items={NAV_ITEMS.map((i) => ({ key: i.key, icon: i.icon, label: i.label }))}
-            theme="dark"
+            theme={isDark ? 'dark' : 'light'}
             style={{ borderRight: 0, background: 'transparent' }}
             onClick={({ key }) => handleNav(key)}
           />

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Tooltip, Typography } from 'antd'
-import { ph, utilColor } from '../theme/tokens'
+import { utilColor } from '../theme/tokens'
+import { useTheme } from '../theme/useTheme'
 
 const { Text } = Typography
 
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function ResourceBar({ label, value, color, subLabel, small }: Props) {
+  const { t } = useTheme()
   const pct = Math.min(100, Math.max(0, value))
   const strokeColor = color ?? utilColor(pct)
 
@@ -20,8 +22,8 @@ export default function ResourceBar({ label, value, color, subLabel, small }: Pr
     <Tooltip title={subLabel ?? `${pct.toFixed(1)}%`} placement="right">
       <div style={{ marginBottom: small ? 4 : 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-          <Text style={{ fontSize: small ? 10 : 11, color: ph.dark.textSec }}>{label}</Text>
-          <Text className="ph-mono" style={{ fontSize: small ? 10 : 11, color: ph.dark.text }}>
+          <Text style={{ fontSize: small ? 10 : 11, color: t.textSec }}>{label}</Text>
+          <Text className="ph-mono" style={{ fontSize: small ? 10 : 11, color: t.text }}>
             {subLabel ?? `${pct.toFixed(1)}%`}
           </Text>
         </div>

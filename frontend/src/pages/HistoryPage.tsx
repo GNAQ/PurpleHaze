@@ -13,6 +13,7 @@ import { tasksApi, Task, TaskStatus } from '../api/tasks'
 import { machinesApi, Machine } from '../api/machines'
 import TaskCreateModal from '../components/TaskCreateModal'
 import { ph } from '../theme/tokens'
+import { useTheme } from '../theme/useTheme'
 
 dayjs.locale('zh-cn')
 
@@ -39,6 +40,7 @@ function formatDuration(start?: string | null, end?: string | null): string {
 }
 
 export default function HistoryPage() {
+  const { t } = useTheme()
   const [tasks, setTasks] = useState<Task[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -124,7 +126,7 @@ export default function HistoryPage() {
     const isPath = value.startsWith('/') || value.startsWith('~') || value.startsWith('./')
     return (
       <Space size={2}>
-        <Text className="ph-mono" style={{ fontSize: 11, color: ph.dark.textCode }}>{value}</Text>
+        <Text className="ph-mono" style={{ fontSize: 11, color: t.textCode }}>{value}</Text>
         {isPath && (
           <Tooltip title="复制路径">
             <Button
@@ -156,11 +158,11 @@ export default function HistoryPage() {
   const columns: ColumnsType<Task> = [
     {
       title: '任务名', dataIndex: 'name', key: 'name', width: 160,
-      render: (name) => <Text strong style={{ fontSize: 13, color: ph.dark.text }}>{name}</Text>,
+      render: (name) => <Text strong style={{ fontSize: 13, color: t.text }}>{name}</Text>,
     },
     {
       title: '机器', key: 'machine', width: 100,
-      render: (_, r) => <Text style={{ color: ph.dark.textSec }}>{getMachineName(r.machine_id)}</Text>,
+      render: (_, r) => <Text style={{ color: t.textSec }}>{getMachineName(r.machine_id)}</Text>,
     },
     {
       title: '状态', dataIndex: 'status', key: 'status', width: 90,
@@ -171,12 +173,12 @@ export default function HistoryPage() {
     },
     {
       title: '命令摘要', key: 'cmd', ellipsis: true, width: 220,
-      render: (_, r) => <Text className="ph-mono" style={{ fontSize: 11, color: ph.dark.textCode }}>{cmdSummary(r)}</Text>,
+      render: (_, r) => <Text className="ph-mono" style={{ fontSize: 11, color: t.textCode }}>{cmdSummary(r)}</Text>,
     },
     {
       title: '退出码', key: 'exit_code', width: 80,
       render: (_, r) => {
-        if (r.exit_code === null) return <span style={{ color: ph.dark.textTer }}>-</span>
+        if (r.exit_code === null) return <span style={{ color: t.textTer }}>-</span>
         const isOk = r.exit_code === 0
         return (
           <span className="ph-mono" style={{
@@ -193,11 +195,11 @@ export default function HistoryPage() {
     },
     {
       title: '开始时间', key: 'started_at', width: 130,
-      render: (_, r) => <Text className="ph-mono" style={{ fontSize: 11, color: ph.dark.textSec }}>{r.started_at ? dayjs(r.started_at).format('MM-DD HH:mm') : '-'}</Text>,
+      render: (_, r) => <Text className="ph-mono" style={{ fontSize: 11, color: t.textSec }}>{r.started_at ? dayjs(r.started_at).format('MM-DD HH:mm') : '-'}</Text>,
     },
     {
       title: '耗时', key: 'duration', width: 80,
-      render: (_, r) => <Text className="ph-mono" style={{ fontSize: 11, color: ph.dark.textSec }}>{formatDuration(r.started_at, r.finished_at)}</Text>,
+      render: (_, r) => <Text className="ph-mono" style={{ fontSize: 11, color: t.textSec }}>{formatDuration(r.started_at, r.finished_at)}</Text>,
     },
     {
       title: '操作', key: 'actions', width: 90,
@@ -279,7 +281,7 @@ export default function HistoryPage() {
                     <Space direction="vertical" size={2}>
                       {(c.args || []).map((a: any, i: number) => (
                         <Space key={i} size={4}>
-                          <Text style={{ fontSize: 11, color: ph.dark.textSec }}>{a.name}</Text>
+                          <Text style={{ fontSize: 11, color: t.textSec }}>{a.name}</Text>
                           {renderArgValue(a.value, isLocal)}
                         </Space>
                       ))}
@@ -306,7 +308,7 @@ export default function HistoryPage() {
                       {record.gpu_condition.mode === 'force' ? '强制选卡' : '智能抢卡'}
                     </Tag>
                     {record.gpu_condition.mode === 'force' && (record.gpu_condition.gpu_ids || []).length > 0 && (
-                      <Text style={{ fontSize: 11, marginLeft: 4, color: ph.dark.textSec }}>
+                      <Text style={{ fontSize: 11, marginLeft: 4, color: t.textSec }}>
                         GPU {(record.gpu_condition.gpu_ids || []).join(',')}
                       </Text>
                     )}

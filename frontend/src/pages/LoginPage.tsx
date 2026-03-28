@@ -3,7 +3,7 @@ import { Form, Input, Button, Typography, message, Space } from 'antd'
 import { LockOutlined } from '@ant-design/icons'
 import { useAuthStore } from '../store/authStore'
 import { authApi } from '../api/auth'
-import { ph } from '../theme/tokens'
+import { useTheme } from '../theme/useTheme'
 
 const { Title, Paragraph } = Typography
 
@@ -12,6 +12,7 @@ interface Props {
 }
 
 export default function LoginPage({ isSetup }: Props) {
+  const { t } = useTheme()
   const [loading, setLoading] = useState(false)
   const [setupMode, setSetupMode] = useState(!isSetup)
   const login = useAuthStore((s) => s.login)
@@ -47,7 +48,7 @@ export default function LoginPage({ isSetup }: Props) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: ph.dark.bg,
+        background: t.bg,
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -94,10 +95,10 @@ export default function LoginPage({ isSetup }: Props) {
               display: 'block',
             }}
           />
-          <Title level={3} style={{ margin: 0, color: ph.dark.text, letterSpacing: 1 }}>
+          <Title level={3} style={{ margin: 0, color: t.text, letterSpacing: 1 }}>
             PurpleHaze
           </Title>
-          <Paragraph style={{ margin: 0, color: ph.dark.textSec, fontSize: 13 }}>
+          <Paragraph style={{ margin: 0, color: t.textSec, fontSize: 13 }}>
             {setupMode ? '首次使用，请设置登录密码' : '请输入密码以继续'}
           </Paragraph>
         </Space>
@@ -105,14 +106,14 @@ export default function LoginPage({ isSetup }: Props) {
         <Form layout="vertical" onFinish={handleSubmit} requiredMark={false}>
           <Form.Item
             name="password"
-            label={<span style={{ color: ph.dark.textSec }}>密码</span>}
+            label={<span style={{ color: t.textSec }}>密码</span>}
             rules={[
               { required: true, message: '请输入密码' },
               setupMode ? { min: 6, message: '密码至少 6 位' } : {},
             ]}
           >
             <Input.Password
-              prefix={<LockOutlined style={{ color: ph.dark.textTer }} />}
+              prefix={<LockOutlined style={{ color: t.textTer }} />}
               placeholder="请输入密码"
               size="large"
             />
@@ -121,11 +122,11 @@ export default function LoginPage({ isSetup }: Props) {
           {setupMode && (
             <Form.Item
               name="confirm"
-              label={<span style={{ color: ph.dark.textSec }}>确认密码</span>}
+              label={<span style={{ color: t.textSec }}>确认密码</span>}
               rules={[{ required: true, message: '请再次输入密码' }]}
             >
               <Input.Password
-                prefix={<LockOutlined style={{ color: ph.dark.textTer }} />}
+                prefix={<LockOutlined style={{ color: t.textTer }} />}
                 placeholder="请再次输入密码"
                 size="large"
               />
