@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function LoginPage({ isSetup }: Props) {
-  const { t } = useTheme()
+  const { t, isDark } = useTheme()
   const [loading, setLoading] = useState(false)
   const [setupMode, setSetupMode] = useState(!isSetup)
   const login = useAuthStore((s) => s.login)
@@ -41,6 +41,8 @@ export default function LoginPage({ isSetup }: Props) {
     }
   }
 
+  const lightLoginBackground = 'radial-gradient(circle at 0% 0%, rgba(168,64,151,0.12) 0%, rgba(168,64,151,0.04) 22%, transparent 46%), radial-gradient(circle at 100% 0%, rgba(92,193,116,0.12) 0%, rgba(92,193,116,0.04) 24%, transparent 50%), linear-gradient(135deg, #f1ecef 0%, #f4f0f4 52%, #eef3ee 100%)'
+
   return (
     <div
       style={{
@@ -48,7 +50,7 @@ export default function LoginPage({ isSetup }: Props) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: t.bg,
+        background: isDark ? t.bg : lightLoginBackground,
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -58,7 +60,7 @@ export default function LoginPage({ isSetup }: Props) {
         position: 'absolute',
         width: 500, height: 500,
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(188,115,173,0.12) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(188,115,173,0.08) 0%, transparent 70%)',
         top: '20%', left: '30%',
         filter: 'blur(80px)',
         pointerEvents: 'none',
@@ -67,7 +69,7 @@ export default function LoginPage({ isSetup }: Props) {
         position: 'absolute',
         width: 400, height: 400,
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(117,193,129,0.08) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(117,193,129,0.06) 0%, transparent 70%)',
         bottom: '10%', right: '20%',
         filter: 'blur(80px)',
         pointerEvents: 'none',
@@ -79,7 +81,7 @@ export default function LoginPage({ isSetup }: Props) {
           width: 400,
           borderRadius: 16,
           padding: '40px 32px',
-          boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
+          boxShadow: isDark ? '0 8px 40px rgba(0,0,0,0.5)' : '0 28px 56px rgba(78,52,86,0.12)',
           position: 'relative',
           zIndex: 1,
         }}

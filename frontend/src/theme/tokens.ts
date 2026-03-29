@@ -75,27 +75,27 @@ export const ph = {
   // ── 浅色主题专用 ────────────────────────────────────────────────────────────
   light: {
     /** 页面最底层背景 */
-    bg:        '#f6f3f9',
+    bg:        '#f1edf0',
     /** 侧边栏/输入框背景 */
-    surface0:  '#eee9f3',
+    surface0:  '#f4eef3',
     /** 卡片表面 */
-    surface1:  '#ffffff',
+    surface1:  '#ebe2ea',
     /** 悬浮/激活态 */
-    surface2:  '#f0ecf5',
+    surface2:  '#e2d6e0',
     /** 弹窗/浮层 */
-    surface3:  '#ffffff',
+    surface3:  '#e8dde6',
     /** 边框 */
-    border:    'rgba(122,59,110,0.15)',
+    border:    'rgba(83,42,86,0.20)',
     /** 分割线 */
-    divider:   'rgba(122,59,110,0.10)',
+    divider:   'rgba(83,42,86,0.14)',
     /** 主文本 */
-    text:      '#2a2035',
+    text:      '#241a29',
     /** 二级文本 */
-    textSec:   '#6d6179',
+    textSec:   '#58505f',
     /** 三级文本 */
-    textTer:   '#9b94a3',
+    textTer:   '#7d7483',
     /** 代码/数据文本 */
-    textCode:  '#5a3d6e',
+    textCode:  '#4c345c',
   },
 
   // ── 玻璃效果 ────────────────────────────────────────────────────────────────
@@ -108,11 +108,11 @@ export const ph = {
   },
 
   glassLight: {
-    bg:       'rgba(255,255,255,0.72)',
-    bgHover:  'rgba(255,255,255,0.85)',
-    border:   'rgba(122,59,110,0.12)',
-    blur:     '16px',
-    blurHeavy:'24px',
+    bg:       'rgba(238,230,237,0.82)',
+    bgHover:  'rgba(232,223,231,0.92)',
+    border:   'rgba(83,42,86,0.16)',
+    blur:     '12px',
+    blurHeavy:'18px',
   },
 
   // ── 辉光 ────────────────────────────────────────────────────────────────────
@@ -124,10 +124,10 @@ export const ph = {
   },
 
   glowLight: {
-    purple:  '0 4px 16px rgba(188,115,173,0.15)',
-    green:   '0 4px 16px rgba(117,193,129,0.15)',
-    error:   '0 4px 16px rgba(224,83,99,0.15)',
-    subtle:  '0 2px 8px rgba(188,115,173,0.08)',
+    purple:  '0 16px 36px rgba(168,64,151,0.12)',
+    green:   '0 16px 34px rgba(92,193,116,0.10)',
+    error:   '0 10px 24px rgba(224,83,99,0.12)',
+    subtle:  '0 10px 22px rgba(99,54,104,0.06)',
   },
 } as const
 
@@ -187,9 +187,9 @@ export function themeTokens(mode: ThemeMode): ThemeTokens {
     glowGreen: ph.glowLight.green,
     glowError: ph.glowLight.error,
     glowSubtle: ph.glowLight.subtle,
-    hoverTint: 'rgba(122,59,110,0.05)',
-    activeTint: 'rgba(122,59,110,0.08)',
-    chromeAlpha: 'rgba(255,255,255,0.85)',
+    hoverTint: 'rgba(168,64,151,0.10)',
+    activeTint: 'linear-gradient(90deg, rgba(168,64,151,0.18) 0%, rgba(92,193,116,0.10) 100%)',
+    chromeAlpha: 'rgba(236,228,236,0.92)',
   }
 }
 

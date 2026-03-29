@@ -53,18 +53,21 @@ function RingGauge({ pct, size = 44, stroke = 3.5, color }: { pct: number; size?
 
 /** GPU 总览格 — ring gauge + compact bars */
 function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
-  const { t } = useTheme()
+  const { t, isDark } = useTheme()
   const util = gpu.utilization
   const vramPct = (gpu.memory_used_mb / gpu.memory_total_mb) * 100
   const uColor = utilColor(util)
 
   return (
     <div style={{
-      background: t.surface2,
-      border: `1px solid ${t.glassBorder}`,
+      background: isDark
+        ? t.surface2
+        : 'linear-gradient(180deg, rgba(239,233,240,0.96) 0%, rgba(230,237,231,0.92) 100%)',
+      border: isDark ? `1px solid ${t.glassBorder}` : '1px solid rgba(83,42,86,0.12)',
       borderRadius: 8,
       padding: '8px 10px',
       transition: 'border-color 0.2s',
+      boxShadow: isDark ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.24)',
     }}>
       {/* Header: GPU index + temp */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -96,13 +99,13 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
               <span style={{ fontSize: 9, color: t.textTer }}>VRAM</span>
               <span className="ph-mono" style={{ fontSize: 9, color: t.textSec }}>{fmtMB(gpu.memory_used_mb)}</span>
             </div>
-            <div style={{ height: 3, borderRadius: 2, background: 'rgba(188,115,173,0.08)', position: 'relative' }}>
+            <div style={{ height: 3, borderRadius: 2, background: isDark ? 'rgba(188,115,173,0.08)' : 'rgba(83,42,86,0.10)', position: 'relative' }}>
               <div style={{ width: `${Math.min(100, vramPct)}%`, height: '100%', background: utilColor(vramPct), borderRadius: 2, transition: 'width 0.5s ease' }} />
               {/* Tick marks */}
               {[25, 50, 75].map((t) => (
                 <div key={t} style={{
                   position: 'absolute', left: `${t}%`, top: -1, width: 1, height: 5,
-                  background: 'rgba(188,115,173,0.15)',
+                  background: isDark ? 'rgba(188,115,173,0.15)' : 'rgba(83,42,86,0.16)',
                 }} />
               ))}
             </div>
@@ -114,7 +117,7 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
                 <span style={{ fontSize: 9, color: t.textTer }}>PWR</span>
                 <span className="ph-mono" style={{ fontSize: 9, color: t.textSec }}>{gpu.power_draw_w.toFixed(0)}W</span>
               </div>
-              <div style={{ height: 3, borderRadius: 2, background: 'rgba(188,115,173,0.08)', position: 'relative' }}>
+              <div style={{ height: 3, borderRadius: 2, background: isDark ? 'rgba(188,115,173,0.08)' : 'rgba(83,42,86,0.10)', position: 'relative' }}>
                 <div style={{
                   width: `${Math.min(100, (gpu.power_draw_w / gpu.power_limit_w) * 100)}%`,
                   height: '100%', background: utilColor((gpu.power_draw_w / gpu.power_limit_w) * 100),
@@ -131,12 +134,15 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
 
 /** GPU 详情区 */
 function GpuDetail({ gpu }: { gpu: GpuInfo }) {
-  const { t } = useTheme()
+  const { t, isDark } = useTheme()
   return (
     <div style={{
-      background: t.surface2,
-      border: `1px solid ${t.glassBorder}`,
+      background: isDark
+        ? t.surface2
+        : 'linear-gradient(180deg, rgba(240,233,240,0.97) 0%, rgba(231,237,232,0.94) 100%)',
+      border: isDark ? `1px solid ${t.glassBorder}` : '1px solid rgba(83,42,86,0.12)',
       borderRadius: 8, padding: '10px 12px', marginBottom: 8,
+      boxShadow: isDark ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.24)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <ThunderboltOutlined style={{ fontSize: 12, color: ph.purple500 }} />
@@ -167,12 +173,12 @@ function GpuDetail({ gpu }: { gpu: GpuInfo }) {
         />
       )}
       {gpu.processes.length > 0 ? (
-        <div style={{ marginTop: 8, borderRadius: 6, overflow: 'hidden', border: `1px solid ${t.glassBorder}` }}>
+        <div style={{ marginTop: 8, borderRadius: 6, overflow: 'hidden', border: isDark ? `1px solid ${t.glassBorder}` : '1px solid rgba(83,42,86,0.12)' }}>
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 60px 44px 42px 54px 66px',
-            padding: '3px 8px', background: t.surface0,
-            borderBottom: `1px solid ${t.glassBorder}`, gap: 4,
+            padding: '3px 8px', background: isDark ? t.surface0 : 'linear-gradient(90deg, rgba(168,64,151,0.10) 0%, rgba(92,193,116,0.06) 100%)',
+            borderBottom: isDark ? `1px solid ${t.glassBorder}` : '1px solid rgba(83,42,86,0.12)', gap: 4,
           }}>
             {['进程名', '用户', 'PID', 'CPU', '内存', '显存'].map((col) => (
               <span key={col} className="ph-mono" style={{ fontSize: 9, color: t.textTer, fontWeight: 600, lineHeight: '16px', textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -192,8 +198,12 @@ function GpuDetail({ gpu }: { gpu: GpuInfo }) {
                 display: 'grid',
                 gridTemplateColumns: '1fr 60px 44px 42px 54px 66px',
                 padding: '4px 8px', gap: 4,
-                background: rowIdx % 2 === 0 ? 'transparent' : 'rgba(188,115,173,0.03)',
-                borderBottom: rowIdx < gpu.processes.length - 1 ? `1px solid rgba(188,115,173,0.06)` : 'none',
+                background: rowIdx % 2 === 0
+                  ? 'transparent'
+                  : isDark ? 'rgba(188,115,173,0.03)' : 'rgba(116,84,122,0.04)',
+                borderBottom: rowIdx < gpu.processes.length - 1
+                  ? isDark ? `1px solid rgba(188,115,173,0.06)` : '1px solid rgba(83,42,86,0.08)'
+                  : 'none',
                 cursor: p.cmdline ? 'help' : 'default', alignItems: 'center',
               }}>
                 <span className="ph-mono" style={{ fontSize: 11, color: t.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -303,15 +313,22 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
 
   const connected = machine.is_local || machine.connected
   const gpuCols = snapshot && snapshot.gpus.length > 4 ? 3 : 2
+  const cardBorderColor = connected
+    ? (isDark ? 'rgba(117,193,129,0.20)' : 'rgba(92,193,116,0.22)')
+    : t.glassBorder
 
   return (
     <div
       className="ph-glass"
       style={{
         borderRadius: 14,
-        boxShadow: connected ? '0 4px 24px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.3)',
-        border: connected ? `1px solid rgba(117,193,129,0.20)` : `1px solid ${t.glassBorder}`,
-        borderLeft: connected ? `3px solid ${ph.green500}` : `1px solid ${t.glassBorder}`,
+        boxShadow: connected
+          ? (isDark ? '0 4px 24px rgba(0,0,0,0.4)' : '0 18px 32px rgba(77,176,108,0.08), 0 12px 24px rgba(78,52,86,0.06)')
+          : (isDark ? '0 4px 16px rgba(0,0,0,0.3)' : '0 12px 24px rgba(78,52,86,0.06)'),
+        borderTop: `1px solid ${cardBorderColor}`,
+        borderRight: `1px solid ${cardBorderColor}`,
+        borderBottom: `1px solid ${cardBorderColor}`,
+        borderLeft: connected ? `3px solid ${ph.green500}` : `1px solid ${cardBorderColor}`,
         overflow: 'hidden',
         transition: 'border-color 0.3s, box-shadow 0.3s',
       }}
@@ -325,8 +342,10 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               padding: '4px 0',
-              background: 'rgba(188,115,173,0.06)',
-              borderBottom: `1px solid rgba(188,115,173,0.10)`,
+              background: isDark
+                ? 'rgba(188,115,173,0.06)'
+                : 'linear-gradient(90deg, rgba(168,64,151,0.08) 0%, rgba(92,193,116,0.05) 100%)',
+              borderBottom: isDark ? `1px solid rgba(188,115,173,0.10)` : '1px solid rgba(83,42,86,0.12)',
               cursor: 'grab',
               userSelect: 'none',
             }}
@@ -345,7 +364,9 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0, flex: 1 }}>
               <div style={{
                 width: 34, height: 34, borderRadius: 10,
-                background: 'linear-gradient(135deg, rgba(188,115,173,0.20) 0%, rgba(117,193,129,0.10) 100%)',
+                background: isDark
+                  ? 'linear-gradient(135deg, rgba(188,115,173,0.20) 0%, rgba(117,193,129,0.10) 100%)'
+                  : 'linear-gradient(135deg, rgba(168,64,151,0.22) 0%, rgba(92,193,116,0.14) 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               }}>
                 <DesktopOutlined style={{ fontSize: 17, color: ph.purple400 }} />
@@ -374,8 +395,8 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '3px 10px', borderRadius: 999,
-              background: 'rgba(188,115,173,0.06)',
-              border: `1px solid rgba(188,115,173,0.12)`,
+              background: isDark ? 'rgba(188,115,173,0.06)' : 'rgba(168,64,151,0.10)',
+              border: isDark ? `1px solid rgba(188,115,173,0.12)` : '1px solid rgba(83,42,86,0.12)',
               minHeight: 28,
             }}>
               <Text className="ph-mono" style={{ fontSize: 10, color: t.textTer }}>POLL</Text>

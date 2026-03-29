@@ -20,7 +20,7 @@ export function getAntdTheme(mode: ThemeMode): ThemeConfig {
       colorTextSecondary: t.textSec,
       // 边框
       colorBorder: t.border,
-      colorBorderSecondary: isDark ? 'rgba(188,115,173,0.12)' : 'rgba(122,59,110,0.10)',
+      colorBorderSecondary: isDark ? 'rgba(188,115,173,0.12)' : 'rgba(122,59,110,0.12)',
       colorSplit: t.divider,
       // 背景
       colorBgLayout: t.bg,
@@ -55,9 +55,9 @@ export function getAntdTheme(mode: ThemeMode): ThemeConfig {
       } : {
         itemBg: 'transparent',
         subMenuItemBg: 'transparent',
-        itemSelectedBg: 'rgba(188,115,173,0.12)',
+        itemSelectedBg: 'linear-gradient(90deg, rgba(168,64,151,0.16) 0%, rgba(92,193,116,0.08) 100%)',
         itemSelectedColor: ph.purple700,
-        itemHoverBg: 'rgba(188,115,173,0.06)',
+        itemHoverBg: 'rgba(168,64,151,0.08)',
         itemHoverColor: ph.purple600,
         itemHeight: 44,
         iconSize: 16,
@@ -67,14 +67,14 @@ export function getAntdTheme(mode: ThemeMode): ThemeConfig {
       },
       Tag: {
         colorSuccess: ph.green500,
-        colorSuccessBg: isDark ? 'rgba(117,193,129,0.12)' : 'rgba(117,193,129,0.10)',
-        colorSuccessBorder: isDark ? 'rgba(117,193,129,0.25)' : 'rgba(117,193,129,0.20)',
+        colorSuccessBg: isDark ? 'rgba(117,193,129,0.12)' : 'rgba(92,193,116,0.18)',
+        colorSuccessBorder: isDark ? 'rgba(117,193,129,0.25)' : 'rgba(92,193,116,0.28)',
       },
       Tabs: {
         inkBarColor: ph.purple500,
         itemSelectedColor: isDark ? ph.purple400 : ph.purple700,
         itemHoverColor: isDark ? ph.purple300 : ph.purple600,
-        cardBg: t.surface1,
+        cardBg: isDark ? t.surface1 : t.surface2,
       },
       Input: {
         activeBorderColor: ph.purple500,
@@ -82,7 +82,7 @@ export function getAntdTheme(mode: ThemeMode): ThemeConfig {
         colorBgContainer: t.surface0,
       },
       Select: {
-        optionSelectedBg: isDark ? 'rgba(188,115,173,0.15)' : 'rgba(188,115,173,0.10)',
+        optionSelectedBg: isDark ? 'rgba(188,115,173,0.15)' : 'rgba(188,115,173,0.12)',
         colorBgContainer: t.surface0,
       },
       Collapse: {
@@ -93,8 +93,8 @@ export function getAntdTheme(mode: ThemeMode): ThemeConfig {
         colorSplit: t.divider,
       },
       Table: {
-        headerBg: t.surface0,
-        rowHoverBg: isDark ? 'rgba(188,115,173,0.06)' : 'rgba(188,115,173,0.04)',
+        headerBg: isDark ? t.surface0 : t.surface2,
+        rowHoverBg: isDark ? 'rgba(188,115,173,0.06)' : 'rgba(168,64,151,0.07)',
         colorBgContainer: t.surface1,
         headerColor: t.textSec,
         borderColor: t.divider,
@@ -111,7 +111,7 @@ export function getAntdTheme(mode: ThemeMode): ThemeConfig {
       Button: {
         primaryShadow: isDark
           ? '0 2px 8px rgba(188,115,173,0.30)'
-          : '0 2px 8px rgba(188,115,173,0.20)',
+          : '0 10px 24px rgba(168,64,151,0.14)',
         defaultBg: t.surface0,
         defaultBorderColor: t.border,
       },
