@@ -29,7 +29,7 @@ import type { ThemeTokens } from '../theme/tokens'
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 function getStatusConfig(t: ThemeTokens): Record<TaskStatus, { color: string; label: string; dotColor: string; pillClass: string }> {
   return {
@@ -272,11 +272,18 @@ export default function TasksPage() {
         className={isRunning ? 'ph-running-glow' : undefined}
         style={{
           marginBottom: 6,
-          background: t.surface2,
-          border: `1px solid ${isRunning ? 'rgba(117,193,129,0.25)' : t.glassBorder}`,
+          background: isDark
+            ? t.surface2
+            : isRunning
+              ? 'linear-gradient(180deg, rgba(232,239,232,0.96) 0%, rgba(229,223,231,0.98) 100%)'
+              : task.status === 'waiting'
+                ? 'linear-gradient(180deg, rgba(239,233,240,0.98) 0%, rgba(231,224,231,0.98) 100%)'
+                : 'linear-gradient(180deg, rgba(231,225,231,0.94) 0%, rgba(227,231,228,0.92) 100%)',
+          border: `1px solid ${isRunning ? 'rgba(117,193,129,0.28)' : isDark ? t.glassBorder : 'rgba(83,42,86,0.14)'}`,
           borderRadius: 8,
           padding: '8px 12px',
           transition: 'border-color 0.3s',
+          boxShadow: isDark ? 'none' : '0 10px 18px rgba(78,52,86,0.04)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -289,8 +296,8 @@ export default function TasksPage() {
                   style={{
                     display: 'inline-flex', alignItems: 'center',
                     cursor: 'grab', color: ph.purple500,
-                    background: 'rgba(188,115,173,0.10)',
-                    border: `1px solid rgba(188,115,173,0.20)`,
+                    background: isDark ? 'rgba(188,115,173,0.10)' : 'rgba(168,64,151,0.10)',
+                    border: isDark ? `1px solid rgba(188,115,173,0.20)` : '1px solid rgba(83,42,86,0.16)',
                     borderRadius: 4, padding: '2px 5px',
                     lineHeight: 1, marginRight: 2,
                   }}
@@ -392,230 +399,238 @@ export default function TasksPage() {
   }
 
   return (
-    <div style={{ height: 'calc(100vh - 92px)', display: 'flex', flexDirection: 'column' }}>
-      {/* 顶部工具栏 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <Space>
-          <Title level={5} style={{ margin: 0, color: t.text }}>任务队列</Title>
-          <Tooltip title="刷新">
+    <div className="ph-page-shell ph-page-shell--tasks">
+      <div className="ph-page-toolbar">
+        <div className="ph-page-toolbar-main">
+          <div className="ph-page-rail">
+            <span className="ph-page-chip ph-page-chip--accent">{pipelines.length} 条流水线</span>
+            <span className="ph-page-chip">{orphanTasks.length} 个未归档任务</span>
+            <span className="ph-page-chip">5 秒轮询</span>
+          </div>
+        </div>
+        <div className="ph-page-toolbar-actions">
+          <Space wrap>
+            <Tooltip title="刷新">
+              <Button
+                icon={refreshing ? <LoadingOutlined spin /> : <ReloadOutlined />}
+                onClick={() => load(true)} size="small"
+              />
+            </Tooltip>
             <Button
-              icon={refreshing ? <LoadingOutlined spin /> : <ReloadOutlined />}
-              onClick={() => load(true)} size="small"
-            />
-          </Tooltip>
-        </Space>
-        <Button
-          type="primary"
-          icon={<UploadOutlined />}
-          onClick={() => setBatchModalOpen(true)}
-        >
-          批量任务
-        </Button>
+              type="primary"
+              icon={<UploadOutlined />}
+              onClick={() => setBatchModalOpen(true)}
+            >
+              批量任务
+            </Button>
+          </Space>
+        </div>
       </div>
 
-      {/* 流水线看板 */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext
-          items={pipelines.map((p) => `pl-${p.id}`)}
-          strategy={horizontalListSortingStrategy}
-        >
-          <div style={{ flex: 1, display: 'flex', gap: 12, overflowX: 'auto', overflowY: 'hidden', paddingBottom: 8 }}>
-            {pipelines.length === 0 && !addingPipelineColumn && (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Empty description={<span style={{ color: t.textSec }}>暂无流水线</span>} />
-              </div>
-            )}
-
-            {pipelines.map((pipeline) => (
-              <SortableItem key={pipeline.id} id={`pl-${pipeline.id}`}>
-                {(plHandleRef, plListeners) => (
-                  <div
-                    className="ph-glass"
-                    style={{
-                      width: 'clamp(300px, 25vw, 380px)', minWidth: 300, display: 'flex', flexDirection: 'column',
-                      borderRadius: 10, flexShrink: 0, height: '100%', overflow: 'hidden',
-                    }}
-                  >
-                    {/* 拖拽条 */}
-                    <div
-                      ref={plHandleRef}
-                      {...plListeners}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        padding: '4px 0',
-                        background: 'rgba(188,115,173,0.05)',
-                        borderBottom: `1px solid rgba(188,115,173,0.10)`,
-                        cursor: 'grab', userSelect: 'none', flexShrink: 0,
-                      }}
-                    >
-                      <div className="ph-grip">
-                        <span /><span /><span /><span /><span /><span />
+      <div className="ph-page-content">
+        <div className="ph-page-content__body" style={{ padding: '2px 0 0', display: 'flex', flexDirection: 'column' }}>
+          <div className="ph-board-stage ph-board-stage--queue">
+            <div className="ph-board-stage__inner">
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext
+                  items={pipelines.map((p) => `pl-${p.id}`)}
+                  strategy={horizontalListSortingStrategy}
+                >
+                  <div style={{ flex: 1, display: 'flex', gap: 12, overflowX: 'auto', overflowY: 'hidden', paddingBottom: 6, height: '100%' }}>
+                    {pipelines.length === 0 && !addingPipelineColumn && (
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Empty description={<span style={{ color: t.textSec }}>暂无流水线</span>} />
                       </div>
-                    </div>
+                    )}
 
-                    <div style={{ padding: 12, display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                      {/* 标题 */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <Space size={4}>
-                          {renamingId === pipeline.id ? (
-                            <Space.Compact size="small">
-                              <Input
-                                value={renameName}
-                                onChange={(e) => setRenameName(e.target.value)}
-                                onPressEnter={() => handleRenamePipeline(pipeline.id)}
-                                autoFocus size="small" style={{ width: 120 }}
-                              />
-                              <Button size="small" onClick={() => handleRenamePipeline(pipeline.id)}>确认</Button>
-                              <Button size="small" onClick={() => setRenamingId(null)}>取消</Button>
-                            </Space.Compact>
-                          ) : (
-                            <Text strong style={{ fontSize: 14, color: t.text }}>{pipeline.name}</Text>
-                          )}
-                        </Space>
-                        <Space size={2}>
-                          <Tooltip title="重命名">
-                            <Button type="text" size="small" icon={<EditOutlined />}
-                              onClick={() => { setRenamingId(pipeline.id); setRenameName(pipeline.name) }} />
-                          </Tooltip>
-                          <Tooltip title="删除">
-                            <Popconfirm title="确认删除该流水线？" onConfirm={() => handleDeletePipeline(pipeline.id)}>
-                              <Button type="text" size="small" icon={<DeleteOutlined />} danger />
-                            </Popconfirm>
-                          </Tooltip>
-                        </Space>
-                      </div>
+                    {pipelines.map((pipeline) => {
+                      const displayedTasks = [...pipeline.tasks].reverse()
+                      const activeTasks = displayedTasks.filter((task) => task.status === 'waiting' || task.status === 'running')
+                      const archivedTasks = displayedTasks.filter((task) => task.status !== 'waiting' && task.status !== 'running')
+                      const visibleArchived = archivedVisibleCount[pipeline.id] ?? 0
+                      const archivedToShow = archivedTasks.slice(0, visibleArchived)
+                      const hasMoreArchived = visibleArchived < archivedTasks.length
 
-                      <Button
-                        type="dashed" icon={<PlusOutlined />} style={{ marginBottom: 8 }}
-                        onClick={() => { setEditTask(null); setDefaultPipelineId(pipeline.id); setCreateModalOpen(true) }}
-                      >
-                        新建任务
-                      </Button>
-
-                      <div style={{ flex: 1, overflowY: 'auto' }}>
-                        {(() => {
-                          const displayedTasks = [...pipeline.tasks].reverse()
-                          const activeTasks = displayedTasks.filter((t) => t.status === 'waiting' || t.status === 'running')
-                          const archivedTasks = displayedTasks.filter((t) => t.status !== 'waiting' && t.status !== 'running')
-                          const visibleArchived = archivedVisibleCount[pipeline.id] ?? 0
-                          const archivedToShow = archivedTasks.slice(0, visibleArchived)
-                          const hasMoreArchived = visibleArchived < archivedTasks.length
-
-                          return (
-                            <>
-                              <SortableContext
-                                items={activeTasks.filter((t) => t.status === 'waiting').map((t) => `tk-${t.id}`)}
-                                strategy={verticalListSortingStrategy}
+                      return (
+                        <SortableItem key={pipeline.id} id={`pl-${pipeline.id}`}>
+                          {(plHandleRef, plListeners) => (
+                            <div
+                              className="ph-glass"
+                              style={{
+                                width: 'clamp(300px, 25vw, 380px)', minWidth: 300, display: 'flex', flexDirection: 'column',
+                                borderRadius: 14, flexShrink: 0, height: '100%', overflow: 'hidden',
+                                boxShadow: isDark ? undefined : '0 18px 32px rgba(78,52,86,0.06)',
+                              }}
+                            >
+                              <div
+                                ref={plHandleRef}
+                                {...plListeners}
+                                style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                  padding: '5px 0',
+                                  background: isDark
+                                    ? 'rgba(188,115,173,0.05)'
+                                    : 'linear-gradient(90deg, rgba(137,86,206,0.12) 0%, rgba(72,188,146,0.08) 100%)',
+                                  borderBottom: isDark ? `1px solid rgba(188,115,173,0.10)` : '1px solid rgba(83,42,86,0.12)',
+                                  cursor: 'grab', userSelect: 'none', flexShrink: 0,
+                                }}
                               >
-                                {activeTasks.length === 0 ? (
-                                  <div style={{
-                                    textAlign: 'center', padding: '28px 0', color: t.textTer,
-                                    border: `1px dashed rgba(188,115,173,0.15)`, borderRadius: 8, margin: '8px 0',
-                                  }}>
-                                    <div className="ph-mono" style={{ fontSize: 20, opacity: 0.3, marginBottom: 4, letterSpacing: 2 }}>{'[ ]'}</div>
-                                    <div style={{ fontSize: 12 }}>暂无活跃任务</div>
-                                  </div>
-                                ) : (
-                                  activeTasks.map((task) =>
-                                    task.status === 'waiting' ? (
-                                      <SortableItem key={task.id} id={`tk-${task.id}`}>
-                                        {(hRef, hListeners) => renderTaskCard(task, pipeline, hRef, hListeners)}
-                                      </SortableItem>
+                                <div className="ph-grip">
+                                  <span /><span /><span /><span /><span /><span />
+                                </div>
+                              </div>
+
+                              <div style={{ padding: 14, display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10, gap: 10 }}>
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    {renamingId === pipeline.id ? (
+                                      <Space.Compact size="small">
+                                        <Input
+                                          value={renameName}
+                                          onChange={(e) => setRenameName(e.target.value)}
+                                          onPressEnter={() => handleRenamePipeline(pipeline.id)}
+                                          autoFocus size="small" style={{ width: 120 }}
+                                        />
+                                        <Button size="small" onClick={() => handleRenamePipeline(pipeline.id)}>确认</Button>
+                                        <Button size="small" onClick={() => setRenamingId(null)}>取消</Button>
+                                      </Space.Compact>
                                     ) : (
-                                      renderTaskCard(task, pipeline)
-                                    ),
-                                  )
-                                )}
-                              </SortableContext>
-
-                              {archivedTasks.length > 0 && (
-                                <>
-                                  <div style={{
-                                    margin: '8px 0 6px', paddingTop: 8,
-                                    borderTop: `1px solid ${t.divider}`,
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                  }}>
-                                    <Text className="ph-mono" style={{ fontSize: 11, color: t.textTer }}>
-                                      ARCHIVED {visibleArchived}/{archivedTasks.length}
-                                    </Text>
-                                    <Button
-                                      size="small"
-                                      onClick={() => loadMoreArchived(pipeline.id, archivedTasks.length)}
-                                      disabled={!hasMoreArchived}
-                                    >
-                                      {visibleArchived === 0 ? '加载' : hasMoreArchived ? '更多' : '已全部'}
-                                    </Button>
+                                      <>
+                                        <Text strong style={{ fontSize: 15, color: t.text }}>{pipeline.name}</Text>
+                                        <div className="ph-column-meta">
+                                          <span className="ph-column-pill ph-column-pill--accent">{activeTasks.length} 活跃</span>
+                                          <span className="ph-column-pill">{archivedTasks.length} 归档</span>
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
-                                  {archivedToShow.map((task) => renderTaskCard(task, pipeline))}
-                                </>
-                              )}
-                            </>
-                          )
-                        })()}
+                                  <Space size={2}>
+                                    <Tooltip title="重命名">
+                                      <Button type="text" size="small" icon={<EditOutlined />}
+                                        onClick={() => { setRenamingId(pipeline.id); setRenameName(pipeline.name) }} />
+                                    </Tooltip>
+                                    <Tooltip title="删除">
+                                      <Popconfirm title="确认删除该流水线？" onConfirm={() => handleDeletePipeline(pipeline.id)}>
+                                        <Button type="text" size="small" icon={<DeleteOutlined />} danger />
+                                      </Popconfirm>
+                                    </Tooltip>
+                                  </Space>
+                                </div>
+
+                                <Button
+                                  type="dashed" icon={<PlusOutlined />} style={{ marginBottom: 10 }}
+                                  onClick={() => { setEditTask(null); setDefaultPipelineId(pipeline.id); setCreateModalOpen(true) }}
+                                >
+                                  新建任务
+                                </Button>
+
+                                <div style={{ flex: 1, overflowY: 'auto', paddingRight: 2 }}>
+                                  <SortableContext
+                                    items={activeTasks.filter((task) => task.status === 'waiting').map((task) => `tk-${task.id}`)}
+                                    strategy={verticalListSortingStrategy}
+                                  >
+                                    {activeTasks.length === 0 ? (
+                                      <div className="ph-column-empty">
+                                        <div className="ph-mono" style={{ fontSize: 20, opacity: 0.26, marginBottom: 6, letterSpacing: 2 }}>{'[ ]'}</div>
+                                        <div style={{ fontSize: 12, color: t.textSec }}>暂无活跃任务</div>
+                                        <div className="ph-mono" style={{ fontSize: 10, color: t.textTer, marginTop: 6, letterSpacing: 0.6 }}>drag waiting tasks here</div>
+                                      </div>
+                                    ) : (
+                                      activeTasks.map((task) =>
+                                        task.status === 'waiting' ? (
+                                          <SortableItem key={task.id} id={`tk-${task.id}`}>
+                                            {(hRef, hListeners) => renderTaskCard(task, pipeline, hRef, hListeners)}
+                                          </SortableItem>
+                                        ) : (
+                                          renderTaskCard(task, pipeline)
+                                        ),
+                                      )
+                                    )}
+                                  </SortableContext>
+
+                                  {archivedTasks.length > 0 && (
+                                    <>
+                                      <div style={{
+                                        margin: '10px 0 6px', paddingTop: 10,
+                                        borderTop: `1px solid ${t.divider}`,
+                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                      }}>
+                                        <Text className="ph-mono" style={{ fontSize: 11, color: t.textTer }}>
+                                          ARCHIVED {visibleArchived}/{archivedTasks.length}
+                                        </Text>
+                                        <Button
+                                          size="small"
+                                          onClick={() => loadMoreArchived(pipeline.id, archivedTasks.length)}
+                                          disabled={!hasMoreArchived}
+                                        >
+                                          {visibleArchived === 0 ? '加载' : hasMoreArchived ? '更多' : '已全部'}
+                                        </Button>
+                                      </div>
+                                      {archivedToShow.map((task) => renderTaskCard(task, pipeline))}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </SortableItem>
+                      )
+                    })}
+
+                    {orphanTasks.length > 0 && (
+                      <div
+                        key="orphaned"
+                        className="ph-glass"
+                        style={{
+                          width: 'clamp(300px, 25vw, 380px)', minWidth: 300, display: 'flex', flexDirection: 'column',
+                          borderRadius: 14, padding: 14, flexShrink: 0,
+                          borderColor: isDark ? 'rgba(155,148,163,0.15)' : 'rgba(83,42,86,0.14)',
+                          boxShadow: isDark ? undefined : '0 18px 32px rgba(78,52,86,0.06)',
+                        }}
+                      >
+                        <Text className="ph-mono" strong style={{ fontSize: 13, display: 'block', color: t.textSec }}>
+                          UNASSIGNED
+                        </Text>
+                        <div className="ph-column-meta" style={{ marginBottom: 10 }}>
+                          <span className="ph-column-pill ph-column-pill--accent">{orphanTasks.length} 待归档</span>
+                        </div>
+                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                          {orphanTasks.map((task) => renderTaskCard(task, null))}
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {addingPipelineColumn ? (
+                      <div className="ph-column-empty" style={{ width: 260, minWidth: 260, padding: 14, display: 'flex', alignItems: 'flex-start' }}>
+                        <Space.Compact style={{ width: '100%' }}>
+                          <Input
+                            autoFocus value={newPipelineName}
+                            onChange={(e) => setNewPipelineName(e.target.value)}
+                            onPressEnter={handleAddPipeline}
+                            placeholder="流水线名称" size="small"
+                          />
+                          <Button size="small" onClick={handleAddPipeline} loading={addingPipeline}>确认</Button>
+                          <Button size="small" onClick={() => { setAddingPipelineColumn(false); setNewPipelineName('') }}>取消</Button>
+                        </Space.Compact>
+                      </div>
+                    ) : (
+                      <div
+                        className="ph-column-empty"
+                        style={{ width: 220, minWidth: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: ph.purple500, transition: 'border-color 0.2s' }}
+                        onClick={() => setAddingPipelineColumn(true)}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(188,115,173,0.28)' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(83,42,86,0.16)' }}
+                      >
+                        <Space><PlusOutlined />新建流水线</Space>
+                      </div>
+                    )}
                   </div>
-                )}
-              </SortableItem>
-            ))}
-
-            {/* Orphan column */}
-            {orphanTasks.length > 0 && (
-              <div
-                key="orphaned"
-                className="ph-glass"
-                style={{
-                  width: 'clamp(300px, 25vw, 380px)', minWidth: 300, display: 'flex', flexDirection: 'column',
-                  borderRadius: 10, padding: 12, flexShrink: 0,
-                  borderColor: 'rgba(155,148,163,0.15)',
-                }}
-              >
-                <Text className="ph-mono" strong style={{ fontSize: 13, marginBottom: 10, display: 'block', color: t.textSec }}>
-                  UNASSIGNED
-                </Text>
-                <div style={{ flex: 1, overflowY: 'auto' }}>
-                  {orphanTasks.map((task) => renderTaskCard(task, null))}
-                </div>
-              </div>
-            )}
-
-            {/* New pipeline */}
-            {addingPipelineColumn ? (
-              <div style={{
-                width: 240, minWidth: 240, border: `2px dashed rgba(188,115,173,0.30)`,
-                borderRadius: 10, padding: 12, flexShrink: 0,
-                display: 'flex', alignItems: 'flex-start',
-              }}>
-                <Space.Compact style={{ width: '100%' }}>
-                  <Input
-                    autoFocus value={newPipelineName}
-                    onChange={(e) => setNewPipelineName(e.target.value)}
-                    onPressEnter={handleAddPipeline}
-                    placeholder="流水线名称" size="small"
-                  />
-                  <Button size="small" onClick={handleAddPipeline} loading={addingPipeline}>确认</Button>
-                  <Button size="small" onClick={() => { setAddingPipelineColumn(false); setNewPipelineName('') }}>取消</Button>
-                </Space.Compact>
-              </div>
-            ) : (
-              <div
-                style={{
-                  width: 200, minWidth: 200, border: `2px dashed rgba(188,115,173,0.25)`,
-                  borderRadius: 10, padding: 12, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', color: ph.purple500,
-                  transition: 'border-color 0.2s',
-                }}
-                onClick={() => setAddingPipelineColumn(true)}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(188,115,173,0.50)' }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(188,115,173,0.25)' }}
-              >
-                <Space><PlusOutlined />新建流水线</Space>
-              </div>
-            )}
+                </SortableContext>
+              </DndContext>
+            </div>
           </div>
-        </SortableContext>
-      </DndContext>
+        </div>
+      </div>
 
       {/* Modals */}
       <TaskCreateModal

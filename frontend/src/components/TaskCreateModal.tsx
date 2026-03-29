@@ -201,6 +201,9 @@ export default function TaskCreateModal({
   const [saveTemplateName, setSaveTemplateName] = useState('')
   const [savingTemplate, setSavingTemplate] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
+  const watchedName = Form.useWatch('name', form)
+  const watchedPipelineId = Form.useWatch('pipeline_id', form)
+  const watchedCondaEnvId = Form.useWatch('conda_env_id', form)
 
   useEffect(() => {
     if (open) {
@@ -419,6 +422,13 @@ export default function TaskCreateModal({
   }
 
   const selectedMachine = machines.find((m) => m.id === selectedMachineId)
+  const selectedPipeline = pipelines.find((pipeline) => pipeline.id === watchedPipelineId)
+  const selectedCondaEnv = condaEnvs.find((env) => env.id === watchedCondaEnvId)
+  const gpuConditionLabel = gpuCondition == null
+    ? '提交前确认'
+    : gpuCondition.mode === 'force'
+      ? `强制 GPU ${(gpuCondition.gpu_ids || []).join(',') || '未指定'}`
+      : '智能抢卡'
 
   return (
     <>
@@ -427,7 +437,7 @@ export default function TaskCreateModal({
         open={open}
         onCancel={onClose}
         width="min(1320px, calc(100vw - 48px))"
-        styles={{ body: { maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' } }}
+        styles={{ body: { maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', paddingTop: 12 } }}
         footer={
           <Space>
             <Button onClick={onClose}>取消</Button>
@@ -443,306 +453,370 @@ export default function TaskCreateModal({
           </Space>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div
-            style={{
-              border: `1px solid ${t.border}`,
-              borderRadius: 10,
-              padding: 12,
-              background: t.surface0,
-            }}
-          >
-            <Space direction="vertical" size={8} style={{ width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="ph-task-modal-shell">
+          <div className="ph-task-modal-sidebar">
+            <div className="ph-task-modal-panel ph-task-modal-panel--accent">
+              <div className="ph-task-modal-panel-title">
                 <Typography.Text strong>任务预设</Typography.Text>
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  点击行选中，点“加载”应用模板；“修改选中”会用下方当前字段覆盖模板。
+                  选择模板后，当前字段会成为新的执行底稿。
                 </Typography.Text>
               </div>
 
-              <Space wrap size={8} style={{ width: '100%' }}>
-                <Input
-                  placeholder="模板名称"
-                  value={saveTemplateName}
-                  onChange={(e) => setSaveTemplateName(e.target.value)}
-                  onPressEnter={selectedTemplateId ? handleUpdateTemplate : handleSaveTemplate}
-                  style={{ width: 300, maxWidth: '100%' }}
-                />
-                <Button
-                  size="small"
-                  type="primary"
-                  icon={<SaveOutlined />}
-                  loading={savingTemplate}
-                  onClick={handleSaveTemplate}
-                  style={{ background: ph.purple500 }}
-                >
-                  新建保存
-                </Button>
-                <Button
-                  size="small"
-                  loading={savingTemplate}
-                  onClick={handleUpdateTemplate}
-                  disabled={!selectedTemplateId}
-                >
-                  修改选中
-                </Button>
-              </Space>
+              <Space direction="vertical" size={8} style={{ width: '100%', position: 'relative', zIndex: 1 }}>
+                <Space wrap size={8} style={{ width: '100%' }}>
+                  <Input
+                    placeholder="模板名称"
+                    value={saveTemplateName}
+                    onChange={(e) => setSaveTemplateName(e.target.value)}
+                    onPressEnter={selectedTemplateId ? handleUpdateTemplate : handleSaveTemplate}
+                    style={{ width: 300, maxWidth: '100%' }}
+                  />
+                  <Button
+                    size="small"
+                    type="primary"
+                    icon={<SaveOutlined />}
+                    loading={savingTemplate}
+                    onClick={handleSaveTemplate}
+                    style={{ background: ph.purple500 }}
+                  >
+                    新建保存
+                  </Button>
+                  <Button
+                    size="small"
+                    loading={savingTemplate}
+                    onClick={handleUpdateTemplate}
+                    disabled={!selectedTemplateId}
+                  >
+                    修改选中
+                  </Button>
+                </Space>
 
-              <Table
-                size="small"
-                dataSource={templates}
-                rowKey="id"
-                pagination={{ pageSize: 6, hideOnSinglePage: true, size: 'small' }}
-                locale={{ emptyText: '暂无模板' }}
-                onRow={(tpl) => ({
-                  onClick: () => {
-                    setSelectedTemplateId(tpl.id)
-                    setSaveTemplateName(tpl.name)
-                  },
-                  style: {
-                    cursor: 'pointer',
-                    background: tpl.id === selectedTemplateId ? 'rgba(188,115,173,0.12)' : undefined,
-                  },
-                })}
-                columns={[
-                  {
-                    title: '名称',
-                    dataIndex: 'name',
-                    ellipsis: true,
-                    render: (name: string, tpl: TaskTemplate) => (
-                      <span style={{ fontWeight: tpl.id === selectedTemplateId ? 600 : 400 }}>{name}</span>
-                    ),
-                  },
-                  {
-                    title: '操作',
-                    width: 130,
-                    render: (_, tpl: TaskTemplate) => (
-                      <Space size={4}>
-                        <Button
-                          size="small"
-                          onClick={(e) => { e.stopPropagation(); loadFromTemplate(tpl) }}
-                        >
-                          加载
-                        </Button>
-                        <Popconfirm
-                          title="删除模板？"
-                          onConfirm={() => handleDeleteTemplate(tpl.id)}
-                        >
+                <Table
+                  size="small"
+                  dataSource={templates}
+                  rowKey="id"
+                  pagination={{ pageSize: 6, hideOnSinglePage: true, size: 'small' }}
+                  locale={{ emptyText: '暂无模板' }}
+                  onRow={(tpl) => ({
+                    onClick: () => {
+                      setSelectedTemplateId(tpl.id)
+                      setSaveTemplateName(tpl.name)
+                    },
+                    style: {
+                      cursor: 'pointer',
+                      background: tpl.id === selectedTemplateId ? 'rgba(168,64,151,0.14)' : undefined,
+                    },
+                  })}
+                  columns={[
+                    {
+                      title: '名称',
+                      dataIndex: 'name',
+                      ellipsis: true,
+                      render: (name: string, tpl: TaskTemplate) => (
+                        <span style={{ fontWeight: tpl.id === selectedTemplateId ? 600 : 400 }}>{name}</span>
+                      ),
+                    },
+                    {
+                      title: '操作',
+                      width: 130,
+                      render: (_, tpl: TaskTemplate) => (
+                        <Space size={4}>
                           <Button
                             size="small"
-                            danger
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => { e.stopPropagation(); loadFromTemplate(tpl) }}
                           >
-                            删除
+                            加载
                           </Button>
-                        </Popconfirm>
-                      </Space>
-                    ),
-                  },
-                ]}
-              />
-            </Space>
+                          <Popconfirm
+                            title="删除模板？"
+                            onConfirm={() => handleDeleteTemplate(tpl.id)}
+                          >
+                            <Button
+                              size="small"
+                              danger
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              删除
+                            </Button>
+                          </Popconfirm>
+                        </Space>
+                      ),
+                    },
+                  ]}
+                />
+              </Space>
+            </div>
+
+            <div className="ph-task-modal-panel">
+              <div className="ph-task-modal-panel-title">
+                <Typography.Text strong>执行摘要</Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {initialTask ? '编辑当前任务的运行上下文' : '提交前快速核对执行环境'}
+                </Typography.Text>
+              </div>
+
+              <div className="ph-task-modal-summary">
+                <div className="ph-task-modal-stat">
+                  <span className="ph-task-modal-stat__label">Task</span>
+                  <span className="ph-task-modal-stat__value">{watchedName || '未命名任务'}</span>
+                </div>
+                <div className="ph-task-modal-stat">
+                  <span className="ph-task-modal-stat__label">Pipeline</span>
+                  <span className="ph-task-modal-stat__value">{selectedPipeline?.name || '未归档'}</span>
+                </div>
+                <div className="ph-task-modal-stat">
+                  <span className="ph-task-modal-stat__label">Machine</span>
+                  <span className="ph-task-modal-stat__value">{selectedMachine?.name || '尚未选择'}</span>
+                </div>
+                <div className="ph-task-modal-stat">
+                  <span className="ph-task-modal-stat__label">GPU View</span>
+                  <span className="ph-task-modal-stat__value">{selectedMachineId ? `${gpuCount} 张 GPU` : '待选择机器'}</span>
+                </div>
+                <div className="ph-task-modal-stat">
+                  <span className="ph-task-modal-stat__label">Conda</span>
+                  <span className="ph-task-modal-stat__value">{selectedCondaEnv?.name || '系统环境'}</span>
+                </div>
+                <div className="ph-task-modal-stat">
+                  <span className="ph-task-modal-stat__label">GPU Rule</span>
+                  <span className="ph-task-modal-stat__value">{gpuConditionLabel}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <Form form={form} layout="vertical">
-            <Tabs
-              defaultActiveKey="basic"
-              items={[
-                {
-                  key: 'basic',
-                  label: '基本信息',
-                  children: (
-                    <>
-                      <Form.Item name="name" label="任务名称" rules={[{ required: true, message: '请输入任务名称' }]}>
-                        <Input placeholder="未命名任务" />
-                      </Form.Item>
+          <div className="ph-task-modal-main">
+            <div className="ph-task-modal-panel ph-task-modal-panel--accent">
+              <div className="ph-task-modal-panel-title">
+                <Typography.Text strong>运行配置</Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  先确定目标机器与运行环境，再压实命令结构；抢卡条件会在提交前作为最后一步确认。
+                </Typography.Text>
+              </div>
 
-                      <Form.Item name="pipeline_id" label="所属流水线">
-                        <Select
-                          placeholder="选择流水线（不选则不加入任何流水线）"
-                          allowClear
-                          options={pipelines.map((p) => ({ label: p.name, value: p.id }))}
-                        />
-                      </Form.Item>
+              <Form form={form} layout="vertical">
+                <Tabs
+                  defaultActiveKey="basic"
+                  items={[
+                    {
+                      key: 'basic',
+                      label: '基本信息',
+                      children: (
+                        <div className="ph-task-modal-tabpane">
+                          <div className="ph-task-modal-form-grid">
+                            <div className="ph-task-modal-form-grid__wide">
+                              <Form.Item name="name" label="任务名称" rules={[{ required: true, message: '请输入任务名称' }]}> 
+                                <Input placeholder="未命名任务" />
+                              </Form.Item>
+                            </div>
 
-                      <Form.Item
-                        name="machine_id"
-                        label="运行机器"
-                        rules={[{ required: true, message: '请选择运行机器' }]}
-                      >
-                        <Select
-                          placeholder="选择机器"
-                          options={machines.map((m) => ({
-                            label: m.is_local ? `${m.name} (本地)` : `${m.name} (${m.ssh_host})`,
-                            value: m.id,
-                          }))}
-                          onChange={(v) => {
-                            setSelectedMachineId(v)
-                            if (v) fetchGpuCount(v)
-                            else setGpuCount(0)
-                          }}
-                        />
-                      </Form.Item>
-                    </>
-                  ),
-                },
-                {
-                  key: 'env',
-                  label: '运行环境',
-                  children: (
-                    <>
-                      <Form.Item label="Conda 环境">
-                        <Space.Compact style={{ width: '100%' }}>
-                          <Form.Item name="conda_env_id" noStyle>
-                            <Select
-                              placeholder="不使用 Conda 环境"
-                              allowClear
-                              options={condaEnvs.map((e) => ({ label: `${e.name} (${e.path})`, value: e.id }))}
-                              style={{ width: '100%' }}
-                            />
+                            <Form.Item name="pipeline_id" label="所属流水线">
+                              <Select
+                                placeholder="选择流水线（不选则不加入任何流水线）"
+                                allowClear
+                                options={pipelines.map((p) => ({ label: p.name, value: p.id }))}
+                              />
+                            </Form.Item>
+
+                            <Form.Item
+                              name="machine_id"
+                              label="运行机器"
+                              rules={[{ required: true, message: '请选择运行机器' }]}
+                            >
+                              <Select
+                                placeholder="选择机器"
+                                options={machines.map((m) => ({
+                                  label: m.is_local ? `${m.name} (本地)` : `${m.name} (${m.ssh_host})`,
+                                  value: m.id,
+                                }))}
+                                onChange={(v) => {
+                                  setSelectedMachineId(v)
+                                  if (v) fetchGpuCount(v)
+                                  else setGpuCount(0)
+                                }}
+                              />
+                            </Form.Item>
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'env',
+                      label: '运行环境',
+                      children: (
+                        <div className="ph-task-modal-tabpane">
+                          <Form.Item label="Conda 环境">
+                            <Space.Compact style={{ width: '100%' }}>
+                              <Form.Item name="conda_env_id" noStyle>
+                                <Select
+                                  placeholder="不使用 Conda 环境"
+                                  allowClear
+                                  options={condaEnvs.map((e) => ({ label: `${e.name} (${e.path})`, value: e.id }))}
+                                  style={{ width: '100%' }}
+                                />
+                              </Form.Item>
+                            </Space.Compact>
+                            <Typography.Link
+                              href="#"
+                              style={{ fontSize: 12, marginTop: 4, display: 'block' }}
+                              onClick={(e) => { e.preventDefault(); onClose() }}
+                            >
+                              在「设置」页管理 Conda 环境 →
+                            </Typography.Link>
                           </Form.Item>
-                        </Space.Compact>
-                        <Typography.Link
-                          href="#"
-                          style={{ fontSize: 12, marginTop: 4, display: 'block' }}
-                          onClick={(e) => { e.preventDefault(); onClose() }}
-                        >
-                          在「设置」页管理 Conda 环境 →
-                        </Typography.Link>
-                      </Form.Item>
 
-                      <Divider orientation="left" plain>环境变量</Divider>
-                      {envVars.map((ev, i) => (
-                        <Space key={i} style={{ display: 'flex', marginBottom: 6 }}>
-                          <Input
-                            placeholder="变量名"
-                            value={ev.key}
-                            onChange={(e) => setEnvVars(prev => prev.map((x, j) => j === i ? { ...x, key: e.target.value } : x))}
-                            style={{ width: 160 }}
-                          />
-                          <Input
-                            placeholder="值"
-                            value={ev.value}
-                            onChange={(e) => setEnvVars(prev => prev.map((x, j) => j === i ? { ...x, value: e.target.value } : x))}
-                            style={{ width: 240 }}
-                          />
-                          <Button
-                            type="text" danger icon={<DeleteOutlined />}
-                            onClick={() => setEnvVars(prev => prev.filter((_, j) => j !== i))}
-                          />
-                        </Space>
-                      ))}
-                      <Button
-                        type="dashed" icon={<PlusOutlined />}
-                        onClick={() => setEnvVars(prev => [...prev, { key: '', value: '' }])}
-                      >
-                        添加环境变量
-                      </Button>
-                    </>
-                  ),
-                },
-                {
-                  key: 'command',
-                  label: '命令配置',
-                  children: (
-                    <>
-                      <div style={{
-                        border: `1px dashed ${t.border}`,
-                        borderRadius: 8,
-                        padding: '10px 12px',
-                        marginBottom: 16,
-                        background: t.surface0,
-                      }}>
-                        <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
-                          粘贴完整命令，自动识别工作目录、环境变量、命令和参数
-                        </Typography.Text>
-                        <Space.Compact style={{ width: '100%' }}>
-                          <Input.TextArea
-                            placeholder="cd /workspace && CUDA_VISIBLE_DEVICES=0,1 python train.py --lr 0.001 --epochs 100"
-                            value={pasteInput}
-                            onChange={(e) => setPasteInput(e.target.value)}
-                            onPressEnter={(e) => { if (!e.shiftKey) { e.preventDefault(); handleParseCommand() } }}
-                            autoSize={{ minRows: 1, maxRows: 4 }}
-                            style={{ flex: 1 }}
-                          />
-                          <Button
-                            icon={<ImportOutlined />}
-                            onClick={handleParseCommand}
-                            style={{ height: 'auto' }}
-                          >
-                            识别填入
-                          </Button>
-                        </Space.Compact>
-                      </div>
-
-                      <Form.Item
-                        name="work_dir"
-                        label="执行根目录"
-                        rules={[{ required: true, message: '请填写执行根目录' }]}
-                      >
-                        <Space.Compact style={{ width: '100%' }}>
-                          <Form.Item name="work_dir" noStyle>
-                            <Input placeholder="/path/to/workdir" />
-                          </Form.Item>
-                          <Button
-                            icon={<FolderOpenOutlined />}
-                            onClick={() => { setPathPickerFor('work_dir'); setPathPickerOpen(true) }}
-                          >
-                            浏览
-                          </Button>
-                        </Space.Compact>
-                      </Form.Item>
-
-                      <Form.Item
-                        name="command"
-                        label="基础命令"
-                        rules={[{ required: true, message: '请填写命令' }]}
-                      >
-                        <Input placeholder="python train.py" />
-                      </Form.Item>
-
-                      <Form.Item label="命令行参数">
-                        {args.map((arg, i) => (
-                          <Space key={i} style={{ display: 'flex', marginBottom: 6 }} align="center">
-                            <Input
-                              placeholder="参数名（--lr）"
-                              value={arg.name}
-                              onChange={(e) => setArgs(prev => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
-                              style={{ width: 160 }}
-                            />
-                            <Space.Compact>
-                              <Input
-                                placeholder="参数值（0.001）"
-                                value={arg.value}
-                                onChange={(e) => setArgs(prev => prev.map((x, j) => j === i ? { ...x, value: e.target.value } : x))}
-                                style={{ width: 200 }}
+                          <div className="ph-task-modal-panel" style={{ padding: 12 }}>
+                            <div className="ph-task-modal-panel-title" style={{ marginBottom: 10 }}>
+                              <Typography.Text strong>环境变量</Typography.Text>
+                              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                为这次运行附加一次性的环境覆盖。
+                              </Typography.Text>
+                            </div>
+                            {envVars.map((ev, i) => (
+                              <Space key={i} style={{ display: 'flex', marginBottom: 6 }}>
+                                <Input
+                                  placeholder="变量名"
+                                  value={ev.key}
+                                  onChange={(e) => setEnvVars(prev => prev.map((x, j) => j === i ? { ...x, key: e.target.value } : x))}
+                                  style={{ width: 160 }}
+                                />
+                                <Input
+                                  placeholder="值"
+                                  value={ev.value}
+                                  onChange={(e) => setEnvVars(prev => prev.map((x, j) => j === i ? { ...x, value: e.target.value } : x))}
+                                  style={{ width: 240 }}
+                                />
+                                <Button
+                                  type="text" danger icon={<DeleteOutlined />}
+                                  onClick={() => setEnvVars(prev => prev.filter((_, j) => j !== i))}
+                                />
+                              </Space>
+                            ))}
+                            <Button
+                              type="dashed" icon={<PlusOutlined />}
+                              onClick={() => setEnvVars(prev => [...prev, { key: '', value: '' }])}
+                            >
+                              添加环境变量
+                            </Button>
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'command',
+                      label: '命令配置',
+                      children: (
+                        <div className="ph-task-modal-tabpane">
+                          <div className="ph-task-modal-panel" style={{ padding: 12 }}>
+                            <div className="ph-task-modal-panel-title" style={{ marginBottom: 10 }}>
+                              <Typography.Text strong>命令粘贴识别</Typography.Text>
+                              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                粘贴完整命令，自动识别工作目录、环境变量、基础命令与参数。
+                              </Typography.Text>
+                            </div>
+                            <Space.Compact style={{ width: '100%' }}>
+                              <Input.TextArea
+                                placeholder="cd /workspace && CUDA_VISIBLE_DEVICES=0,1 python train.py --lr 0.001 --epochs 100"
+                                value={pasteInput}
+                                onChange={(e) => setPasteInput(e.target.value)}
+                                onPressEnter={(e) => { if (!e.shiftKey) { e.preventDefault(); handleParseCommand() } }}
+                                autoSize={{ minRows: 1, maxRows: 4 }}
+                                style={{ flex: 1 }}
                               />
                               <Button
-                                icon={<FolderOpenOutlined />}
-                                onClick={() => { setArgPathPickerIndex(i); setPathPickerOpen(true) }}
-                                title="选择路径"
-                              />
+                                icon={<ImportOutlined />}
+                                onClick={handleParseCommand}
+                                style={{ height: 'auto' }}
+                              >
+                                识别填入
+                              </Button>
                             </Space.Compact>
-                            <Button
-                              type="text" danger icon={<DeleteOutlined />}
-                              onClick={() => setArgs(prev => prev.filter((_, j) => j !== i))}
-                            />
-                          </Space>
-                        ))}
-                        <Button
-                          type="dashed" icon={<PlusOutlined />}
-                          onClick={() => setArgs(prev => [...prev, { name: '', value: '' }])}
-                          block
-                        >
-                          添加参数
-                        </Button>
-                      </Form.Item>
-                    </>
-                  ),
-                },
-              ]}
-            />
-          </Form>
+                          </div>
+
+                          <div className="ph-task-modal-form-grid">
+                            <div className="ph-task-modal-form-grid__wide">
+                              <Form.Item
+                                name="work_dir"
+                                label="执行根目录"
+                                rules={[{ required: true, message: '请填写执行根目录' }]}
+                              >
+                                <Space.Compact style={{ width: '100%' }}>
+                                  <Form.Item name="work_dir" noStyle>
+                                    <Input placeholder="/path/to/workdir" />
+                                  </Form.Item>
+                                  <Button
+                                    icon={<FolderOpenOutlined />}
+                                    onClick={() => { setPathPickerFor('work_dir'); setPathPickerOpen(true) }}
+                                  >
+                                    浏览
+                                  </Button>
+                                </Space.Compact>
+                              </Form.Item>
+                            </div>
+
+                            <div className="ph-task-modal-form-grid__wide">
+                              <Form.Item
+                                name="command"
+                                label="基础命令"
+                                rules={[{ required: true, message: '请填写命令' }]}
+                              >
+                                <Input placeholder="python train.py" />
+                              </Form.Item>
+                            </div>
+                          </div>
+
+                          <div className="ph-task-modal-panel" style={{ padding: 12 }}>
+                            <div className="ph-task-modal-panel-title" style={{ marginBottom: 10 }}>
+                              <Typography.Text strong>命令行参数</Typography.Text>
+                              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                保留结构化参数，便于编辑、模板保存和后续重跑。
+                              </Typography.Text>
+                            </div>
+                            <Form.Item label={null} style={{ marginBottom: 0 }}>
+                              {args.map((arg, i) => (
+                                <Space key={i} style={{ display: 'flex', marginBottom: 6 }} align="center">
+                                  <Input
+                                    placeholder="参数名（--lr）"
+                                    value={arg.name}
+                                    onChange={(e) => setArgs(prev => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
+                                    style={{ width: 160 }}
+                                  />
+                                  <Space.Compact>
+                                    <Input
+                                      placeholder="参数值（0.001）"
+                                      value={arg.value}
+                                      onChange={(e) => setArgs(prev => prev.map((x, j) => j === i ? { ...x, value: e.target.value } : x))}
+                                      style={{ width: 200 }}
+                                    />
+                                    <Button
+                                      icon={<FolderOpenOutlined />}
+                                      onClick={() => { setArgPathPickerIndex(i); setPathPickerOpen(true) }}
+                                      title="选择路径"
+                                    />
+                                  </Space.Compact>
+                                  <Button
+                                    type="text" danger icon={<DeleteOutlined />}
+                                    onClick={() => setArgs(prev => prev.filter((_, j) => j !== i))}
+                                  />
+                                </Space>
+                              ))}
+                              <Button
+                                type="dashed" icon={<PlusOutlined />}
+                                onClick={() => setArgs(prev => [...prev, { name: '', value: '' }])}
+                                block
+                              >
+                                添加参数
+                              </Button>
+                            </Form.Item>
+                          </div>
+                        </div>
+                      ),
+                    },
+                  ]}
+                />
+              </Form>
+            </div>
+          </div>
         </div>
       </Modal>
 

@@ -224,111 +224,128 @@ export default function HistoryPage() {
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, alignItems: 'center' }}>
-        <Input
-          placeholder="搜索任务名"
-          prefix={<SearchOutlined />}
-          value={searchName}
-          onChange={(e) => setSearchName(e.target.value)}
-          style={{ width: 160 }}
-          allowClear
-        />
-        <Select
-          value={machineFilter ?? ''}
-          onChange={(v) => setMachineFilter(v === '' ? null : (v as number))}
-          style={{ width: 130 }}
-        >
-          <Option value="">所有机器</Option>
-          {machines.map((m) => (
-            <Option key={m.id} value={m.id}>{m.name}</Option>
-          ))}
-        </Select>
-        <Select
-          value={statusFilter}
-          onChange={(v) => { setStatusFilter(v); setPage(1) }}
-          style={{ width: 120 }}
-          placeholder="状态筛选"
-        >
-          <Option value="">全部</Option>
-          {HISTORY_STATUSES.map((s) => (
-            <Option key={s} value={s}>{STATUS_CONFIG[s].label}</Option>
-          ))}
-        </Select>
-        <Button icon={<ReloadOutlined />} onClick={load}>刷新</Button>
+    <div className="ph-page-shell ph-page-shell--history" style={{ minHeight: '100%' }}>
+      <div className="ph-page-toolbar">
+        <div className="ph-page-toolbar-main">
+          <div className="ph-page-rail">
+            <span className="ph-page-chip ph-page-chip--accent">{loading ? '载入记录中' : `共 ${total} 条记录`}</span>
+            <span className="ph-page-chip">完成 / 失败 / 取消</span>
+            {statusFilter && <span className="ph-page-chip">状态: {STATUS_CONFIG[statusFilter].label}</span>}
+          </div>
+        </div>
       </div>
 
-      <Table<Task>
-        rowKey="id"
-        dataSource={displayTasks}
-        columns={columns}
-        pagination={pagination}
-        loading={loading}
-        size="small"
-        expandable={{
-          expandedRowRender: (record) => {
-            const c = record.config || {}
-            const isLocal = !record.machine_id
-            return (
-              <Descriptions size="small" column={2} style={{ fontSize: 12 }}>
-                {c.work_dir && (
-                  <Descriptions.Item label="工作目录" span={2}>
-                    {renderArgValue(c.work_dir, isLocal)}
-                  </Descriptions.Item>
-                )}
-                {(c.args || []).length > 0 && (
-                  <Descriptions.Item label="参数列表" span={2}>
-                    <Space direction="vertical" size={2}>
-                      {(c.args || []).map((a: any, i: number) => (
-                        <Space key={i} size={4}>
-                          <Text style={{ fontSize: 11, color: t.textSec }}>{a.name}</Text>
-                          {renderArgValue(a.value, isLocal)}
-                        </Space>
-                      ))}
-                    </Space>
-                  </Descriptions.Item>
-                )}
-                {Object.keys(c.env_vars || {}).length > 0 && (
-                  <Descriptions.Item label="环境变量" span={2}>
-                    <Space wrap size={4}>
-                      {Object.entries(c.env_vars || {}).map(([k, v]) => (
-                        <Tag key={k}>{k}={String(v)}</Tag>
-                      ))}
-                    </Space>
-                  </Descriptions.Item>
-                )}
-                {record.assigned_gpu_ids && record.assigned_gpu_ids.length > 0 && (
-                  <Descriptions.Item label="分配GPU">
-                    <Tag color="purple">GPU {record.assigned_gpu_ids.join(',')}</Tag>
-                  </Descriptions.Item>
-                )}
-                {record.gpu_condition && (
-                  <Descriptions.Item label="抢卡条件">
-                    <Tag color="purple">
-                      {record.gpu_condition.mode === 'force' ? '强制选卡' : '智能抢卡'}
-                    </Tag>
-                    {record.gpu_condition.mode === 'force' && (record.gpu_condition.gpu_ids || []).length > 0 && (
-                      <Text style={{ fontSize: 11, marginLeft: 4, color: t.textSec }}>
-                        GPU {(record.gpu_condition.gpu_ids || []).join(',')}
-                      </Text>
+      <div className="ph-page-content">
+        <div className="ph-local-surface ph-ledger-surface">
+          <div className="ph-surface-toolbar">
+            <div className="ph-surface-toolbar-actions">
+              <Input
+                placeholder="搜索任务名"
+                prefix={<SearchOutlined />}
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                style={{ width: 160 }}
+                allowClear
+              />
+              <Select
+                value={machineFilter ?? ''}
+                onChange={(v) => setMachineFilter(v === '' ? null : (v as number))}
+                style={{ width: 130 }}
+              >
+                <Option value="">所有机器</Option>
+                {machines.map((m) => (
+                  <Option key={m.id} value={m.id}>{m.name}</Option>
+                ))}
+              </Select>
+              <Select
+                value={statusFilter}
+                onChange={(v) => { setStatusFilter(v); setPage(1) }}
+                style={{ width: 120 }}
+                placeholder="状态筛选"
+              >
+                <Option value="">全部</Option>
+                {HISTORY_STATUSES.map((s) => (
+                  <Option key={s} value={s}>{STATUS_CONFIG[s].label}</Option>
+                ))}
+              </Select>
+              <Button icon={<ReloadOutlined />} onClick={load}>刷新</Button>
+            </div>
+          </div>
+
+          <Table<Task>
+            rowKey="id"
+            dataSource={displayTasks}
+            columns={columns}
+            pagination={pagination}
+            loading={loading}
+            size="small"
+            rowClassName={() => 'ph-history-row'}
+            expandable={{
+              expandedRowRender: (record) => {
+                const c = record.config || {}
+                const isLocal = !record.machine_id
+                return (
+                  <Descriptions size="small" column={2} style={{ fontSize: 12 }}>
+                    {c.work_dir && (
+                      <Descriptions.Item label="工作目录" span={2}>
+                        {renderArgValue(c.work_dir, isLocal)}
+                      </Descriptions.Item>
                     )}
-                  </Descriptions.Item>
-                )}
-                {record.started_at && (
-                  <Descriptions.Item label="开始时间">
-                    {dayjs(record.started_at).format('YYYY-MM-DD HH:mm:ss')}
-                  </Descriptions.Item>
-                )}
-                {record.finished_at && (
-                  <Descriptions.Item label="完成时间">
-                    {dayjs(record.finished_at).format('YYYY-MM-DD HH:mm:ss')}
-                  </Descriptions.Item>
-                )}
-              </Descriptions>
-            )
-          },
-        }}
-      />
+                    {(c.args || []).length > 0 && (
+                      <Descriptions.Item label="参数列表" span={2}>
+                        <Space direction="vertical" size={2}>
+                          {(c.args || []).map((a: any, i: number) => (
+                            <Space key={i} size={4}>
+                              <Text style={{ fontSize: 11, color: t.textSec }}>{a.name}</Text>
+                              {renderArgValue(a.value, isLocal)}
+                            </Space>
+                          ))}
+                        </Space>
+                      </Descriptions.Item>
+                    )}
+                    {Object.keys(c.env_vars || {}).length > 0 && (
+                      <Descriptions.Item label="环境变量" span={2}>
+                        <Space wrap size={4}>
+                          {Object.entries(c.env_vars || {}).map(([k, v]) => (
+                            <Tag key={k}>{k}={String(v)}</Tag>
+                          ))}
+                        </Space>
+                      </Descriptions.Item>
+                    )}
+                    {record.assigned_gpu_ids && record.assigned_gpu_ids.length > 0 && (
+                      <Descriptions.Item label="分配GPU">
+                        <Tag color="purple">GPU {record.assigned_gpu_ids.join(',')}</Tag>
+                      </Descriptions.Item>
+                    )}
+                    {record.gpu_condition && (
+                      <Descriptions.Item label="抢卡条件">
+                        <Tag color="purple">
+                          {record.gpu_condition.mode === 'force' ? '强制选卡' : '智能抢卡'}
+                        </Tag>
+                        {record.gpu_condition.mode === 'force' && (record.gpu_condition.gpu_ids || []).length > 0 && (
+                          <Text style={{ fontSize: 11, marginLeft: 4, color: t.textSec }}>
+                            GPU {(record.gpu_condition.gpu_ids || []).join(',')}
+                          </Text>
+                        )}
+                      </Descriptions.Item>
+                    )}
+                    {record.started_at && (
+                      <Descriptions.Item label="开始时间">
+                        {dayjs(record.started_at).format('YYYY-MM-DD HH:mm:ss')}
+                      </Descriptions.Item>
+                    )}
+                    {record.finished_at && (
+                      <Descriptions.Item label="完成时间">
+                        {dayjs(record.finished_at).format('YYYY-MM-DD HH:mm:ss')}
+                      </Descriptions.Item>
+                    )}
+                  </Descriptions>
+                )
+              },
+            }}
+          />
+        </div>
+      </div>
 
       {/* 日志弹窗 */}
       <Modal

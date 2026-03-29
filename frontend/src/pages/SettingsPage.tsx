@@ -7,7 +7,7 @@ import { authApi, type SettingItem } from '../api/auth'
 import { tasksApi, type CondaEnv } from '../api/tasks'
 import { useTheme } from '../theme/useTheme'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 export default function SettingsPage() {
   const { t } = useTheme()
@@ -79,118 +79,132 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 640 }}>
-      <Title level={4} style={{ margin: 0, marginBottom: 20, color: t.text }}>设置</Title>
+    <div className="ph-page-shell ph-page-shell--settings" style={{ width: '100%', minHeight: '100%' }}>
+      <div className="ph-page-toolbar">
+        <div className="ph-page-rail">
+          <span className="ph-page-chip ph-page-chip--accent">密码与认证</span>
+          <span className="ph-page-chip">运行配置</span>
+          <span className="ph-page-chip">Conda 环境</span>
+        </div>
+      </div>
 
-      {/* 修改密码 */}
-      <Card title="修改密码" style={{ marginBottom: 16 }} className="ph-glass-card">
-        <Form form={pwdForm} layout="vertical" onFinish={handleChangePassword}>
-          <Form.Item name="old_password" label="当前密码" rules={[{ required: true, message: '请输入当前密码' }]}>
-            <Input.Password prefix={<LockOutlined />} />
-          </Form.Item>
-          <Form.Item name="new_password" label="新密码" rules={[{ required: true, min: 6, message: '新密码至少 6 位' }]}>
-            <Input.Password prefix={<LockOutlined />} />
-          </Form.Item>
-          <Form.Item name="confirm" label="确认新密码" rules={[{ required: true, message: '请再次输入新密码' }]}>
-            <Input.Password prefix={<LockOutlined />} />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" loading={pwdLoading}>
-            修改密码
-          </Button>
-        </Form>
-      </Card>
+      <div className="ph-page-content" style={{ overflowY: 'auto' }}>
+        <div className="ph-page-content__body" style={{ padding: '2px 0 8px' }}>
+          <div className="ph-settings-grid">
+            <div className="ph-settings-stack">
+              <Card title="修改密码" className="ph-glass-card">
+                <Form form={pwdForm} layout="vertical" onFinish={handleChangePassword}>
+                  <Form.Item name="old_password" label="当前密码" rules={[{ required: true, message: '请输入当前密码' }]}> 
+                    <Input.Password prefix={<LockOutlined />} />
+                  </Form.Item>
+                  <Form.Item name="new_password" label="新密码" rules={[{ required: true, min: 6, message: '新密码至少 6 位' }]}> 
+                    <Input.Password prefix={<LockOutlined />} />
+                  </Form.Item>
+                  <Form.Item name="confirm" label="确认新密码" rules={[{ required: true, message: '请再次输入新密码' }]}> 
+                    <Input.Password prefix={<LockOutlined />} />
+                  </Form.Item>
+                  <Button type="primary" htmlType="submit" loading={pwdLoading}>
+                    修改密码
+                  </Button>
+                </Form>
+              </Card>
 
-      {/* 其他配置（键值对） */}
-      <Card title="其他配置" className="ph-glass-card">
-        {settingsLoading ? (
-          <Spin />
-        ) : settings.length === 0 ? (
-          <Text style={{ color: t.textSec }}>暂无可配置项</Text>
-        ) : (
-          <Space direction="vertical" style={{ width: '100%' }}>
-            {settings.map((item, idx) => (
-              <div key={item.key}>
-                <Text strong style={{ fontSize: 13, color: t.text }}>{item.key}</Text>
-                {item.description && (
-                  <Text style={{ fontSize: 12, marginLeft: 8, color: t.textSec }}>{item.description}</Text>
+              <Card title="其他配置" className="ph-glass-card">
+                {settingsLoading ? (
+                  <Spin />
+                ) : settings.length === 0 ? (
+                  <Text style={{ color: t.textSec }}>暂无可配置项</Text>
+                ) : (
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    {settings.map((item, idx) => (
+                      <div key={item.key}>
+                        <Text strong style={{ fontSize: 13, color: t.text }}>{item.key}</Text>
+                        {item.description && (
+                          <Text style={{ fontSize: 12, marginLeft: 8, color: t.textSec }}>{item.description}</Text>
+                        )}
+                        <Input
+                          value={item.value}
+                          onChange={(e) => {
+                            const updated = [...settings]
+                            updated[idx] = { ...item, value: e.target.value }
+                            setSettings(updated)
+                          }}
+                          style={{ marginTop: 4 }}
+                        />
+                      </div>
+                    ))}
+                    <Button
+                      type="primary"
+                      icon={<SaveOutlined />}
+                      loading={settingsSaving}
+                      style={{ marginTop: 8 }}
+                      onClick={async () => {
+                        setSettingsSaving(true)
+                        try {
+                          await authApi.updateSettings(settings)
+                          message.success('配置已保存')
+                        } catch (_) {
+                          message.error('保存失败')
+                        }
+                        setSettingsSaving(false)
+                      }}
+                    >
+                      保存配置
+                    </Button>
+                  </Space>
                 )}
-                <Input
-                  value={item.value}
-                  onChange={(e) => {
-                    const updated = [...settings]
-                    updated[idx] = { ...item, value: e.target.value }
-                    setSettings(updated)
-                  }}
-                  style={{ marginTop: 4 }}
-                />
-              </div>
-            ))}
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              loading={settingsSaving}
-              style={{ marginTop: 8 }}
-              onClick={async () => {
-                setSettingsSaving(true)
-                try {
-                  await authApi.updateSettings(settings)
-                  message.success('配置已保存')
-                } catch (_) {
-                  message.error('保存失败')
-                }
-                setSettingsSaving(false)
-              }}
-            >
-              保存配置
-            </Button>
-          </Space>
-        )}
-      </Card>
+              </Card>
+            </div>
 
-      {/* Conda 环境管理 */}
-      <Card title="Conda 环境" style={{ marginTop: 16 }}         extra={
-          <Button size="small" icon={<PlusOutlined />} onClick={() => setCondaAdding((v) => !v)}>
-            {condaAdding ? '取消' : '添加'}
-          </Button>
-        }
-      >
-        {condaLoading ? <Spin /> : (
-          <>
-            {condaAdding && (
-              <Form form={condaForm} layout="inline" onFinish={handleAddCondaEnv} style={{ marginBottom: 12 }}>
-                <Form.Item name="name" rules={[{ required: true, message: '请输入名称' }]}>
-                  <Input placeholder="环境名称" style={{ width: 140 }} />
-                </Form.Item>
-                <Form.Item name="path">
-                  <Input placeholder="环境路径（选填，空则用 conda activate）" style={{ width: 260 }} allowClear />
-                </Form.Item>
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={condaSaving}>确认</Button>
-                </Form.Item>
-              </Form>
-            )}
-            <List
-              size="small"
-              dataSource={condaEnvs}
-              locale={{ emptyText: '暂无 Conda 环境' }}
-              renderItem={(env) => (
-                <List.Item
-                  actions={[
-                    <Popconfirm title="确认删除？" onConfirm={() => handleDeleteCondaEnv(env.id)}>
-                      <Button type="link" danger size="small" icon={<DeleteOutlined />} />
-                    </Popconfirm>,
-                  ]}
-                >
-                  <List.Item.Meta
-                    title={env.name}
-                    description={env.path ? env.path : <span style={{ color: t.textTer, fontStyle: 'italic' }}>conda activate {env.name}</span>}
+            <Card
+              title="Conda 环境"
+              className="ph-glass-card"
+              extra={
+                <Button size="small" icon={<PlusOutlined />} onClick={() => setCondaAdding((v) => !v)}>
+                  {condaAdding ? '取消' : '添加'}
+                </Button>
+              }
+            >
+              {condaLoading ? <Spin /> : (
+                <>
+                  {condaAdding && (
+                    <Form form={condaForm} layout="inline" onFinish={handleAddCondaEnv} style={{ marginBottom: 12 }}>
+                      <Form.Item name="name" rules={[{ required: true, message: '请输入名称' }]}> 
+                        <Input placeholder="环境名称" style={{ width: 140 }} />
+                      </Form.Item>
+                      <Form.Item name="path">
+                        <Input placeholder="环境路径（选填，空则用 conda activate）" style={{ width: 260 }} allowClear />
+                      </Form.Item>
+                      <Form.Item>
+                        <Button type="primary" htmlType="submit" loading={condaSaving}>确认</Button>
+                      </Form.Item>
+                    </Form>
+                  )}
+                  <List
+                    size="small"
+                    dataSource={condaEnvs}
+                    locale={{ emptyText: '暂无 Conda 环境' }}
+                    renderItem={(env) => (
+                      <List.Item
+                        actions={[
+                          <Popconfirm title="确认删除？" onConfirm={() => handleDeleteCondaEnv(env.id)}>
+                            <Button type="link" danger size="small" icon={<DeleteOutlined />} />
+                          </Popconfirm>,
+                        ]}
+                      >
+                        <List.Item.Meta
+                          title={env.name}
+                          description={env.path ? env.path : <span style={{ color: t.textTer, fontStyle: 'italic' }}>conda activate {env.name}</span>}
+                        />
+                      </List.Item>
+                    )}
                   />
-                </List.Item>
+                </>
               )}
-            />
-          </>
-        )}
-      </Card>
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

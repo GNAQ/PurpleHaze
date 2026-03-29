@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Button, Spin, Empty, Typography, message, Space } from 'antd'
+import { Button, Spin, Empty, message, Space } from 'antd'
 import { PlusOutlined, ReloadOutlined, DesktopOutlined } from '@ant-design/icons'
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
@@ -16,10 +16,8 @@ import MachineCard from '../components/MachineCard'
 import MachineFormModal from '../components/MachineFormModal'
 import { useTheme } from '../theme/useTheme'
 
-const { Title } = Typography
-
-const CUSTOM_SCROLLBAR_H = 30
-const HIDDEN_SCROLLBAR_GUTTER = 26
+const CUSTOM_SCROLLBAR_H = 26
+const HIDDEN_SCROLLBAR_GUTTER = 22
 const MIN_SCROLLBAR_THUMB_W = 78
 const MAX_SCROLLBAR_THUMB_W = 220
 const THUMB_COMPACT_RATIO = 0.62
@@ -348,7 +346,7 @@ function HorizontalScrollArea({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: 8 }}>
       <div
         ref={trackRef}
         className={`ph-machine-scrollbar${hasOverflow ? '' : ' is-disabled'}${draggingThumb ? ' is-dragging' : ''}`}
@@ -399,7 +397,7 @@ function HorizontalScrollArea({ children }: { children: React.ReactNode }) {
               width: 'max-content',
               minWidth: '100%',
               gap: 16,
-              padding: '8px 2px 16px',
+              padding: '4px 2px 12px',
               alignItems: 'flex-start',
             }}
           >
@@ -470,6 +468,7 @@ export default function MachinesPage() {
   const activeMachine = activeMachineId == null
     ? null
     : machines.find((machine) => machine.id === activeMachineId) ?? null
+  const connectedCount = machines.filter((machine) => machine.is_local || machine.connected).length
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -532,63 +531,81 @@ export default function MachinesPage() {
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0, color: t.text }}>机器管理</Title>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={load}>刷新</Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => { setEditingMachine(null); setModalOpen(true) }}
-          >
-            添加机器
-          </Button>
-        </Space>
+    <div className="ph-page-shell ph-page-shell--machines">
+      <div className="ph-page-toolbar">
+        <div className="ph-page-toolbar-main">
+          <div className="ph-page-rail">
+            <span className="ph-page-chip ph-page-chip--accent">
+              {loading ? '载入机器中' : `${machines.length} 台机器`}
+            </span>
+            <span className="ph-page-chip">{loading ? '状态统计中' : `${connectedCount} 台在线`}</span>
+            <span className="ph-page-chip">拖拽排序</span>
+          </div>
+        </div>
+        <div className="ph-page-toolbar-actions">
+          <Space wrap>
+            <Button icon={<ReloadOutlined />} onClick={load}>刷新</Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => { setEditingMachine(null); setModalOpen(true) }}
+            >
+              添加机器
+            </Button>
+          </Space>
+        </div>
       </div>
 
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>
-      ) : machines.length === 0 ? (
-        <Empty description={<span style={{ color: t.textSec }}>暂无机器</span>} style={{ padding: 80 }}>
-          <Button
-            type="primary" icon={<PlusOutlined />}
-            onClick={() => { setEditingMachine(null); setModalOpen(true) }}
-          >
-            添加第一台机器
-          </Button>
-        </Empty>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveMachineId(null)}
-        >
-          <SortableContext
-            items={machines.map((m) => `mc-${m.id}`)}
-            strategy={horizontalListSortingStrategy}
-          >
-            <HorizontalScrollArea>
-              {machines.map((m, i) => (
-                <SortableMachineItem
-                  key={m.id}
-                  machine={m}
-                  index={i}
-                  onEdit={(machine) => { setEditingMachine(machine); setModalOpen(true) }}
-                  onDeleted={(id) => setMachines((prev) => prev.filter((x) => x.id !== id))}
-                  onConnectionChange={handleConnectionChange}
-                />
-              ))}
-            </HorizontalScrollArea>
-          </SortableContext>
+      <div className="ph-page-content">
+        <div className="ph-page-content__body" style={{ display: 'flex', flexDirection: 'column', padding: '2px 0 0' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>
+          ) : machines.length === 0 ? (
+            <Empty description={<span style={{ color: t.textSec }}>暂无机器</span>} style={{ padding: 80 }}>
+              <Button
+                type="primary" icon={<PlusOutlined />}
+                onClick={() => { setEditingMachine(null); setModalOpen(true) }}
+              >
+                添加第一台机器
+              </Button>
+            </Empty>
+          ) : (
+            <div className="ph-board-stage ph-board-stage--fleet">
+              <div className="ph-board-stage__inner">
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDragCancel={() => setActiveMachineId(null)}
+                >
+                  <SortableContext
+                    items={machines.map((m) => `mc-${m.id}`)}
+                    strategy={horizontalListSortingStrategy}
+                  >
+                    <HorizontalScrollArea>
+                      {machines.map((m, i) => (
+                        <SortableMachineItem
+                          key={m.id}
+                          machine={m}
+                          index={i}
+                          onEdit={(machine) => { setEditingMachine(machine); setModalOpen(true) }}
+                          onDeleted={(id) => setMachines((prev) => prev.filter((x) => x.id !== id))}
+                          onConnectionChange={handleConnectionChange}
+                        />
+                      ))}
+                    </HorizontalScrollArea>
+                  </SortableContext>
 
-          <DragOverlay zIndex={1200}>
-            {activeMachine ? <MachineDragPreview machine={activeMachine} /> : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+                  <DragOverlay zIndex={1200}>
+                    {activeMachine ? <MachineDragPreview machine={activeMachine} /> : null}
+                  </DragOverlay>
+                </DndContext>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       <MachineFormModal
         open={modalOpen}
