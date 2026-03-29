@@ -36,13 +36,13 @@
 
 **改动文件**: `AppLayout.tsx`, `index.css`
 
-- 默认态：**64px 宽 icon-only 竖条**，只显示图标 + 选中指示条
-- Hover/展开态：**200px 宽**，图标 + 文字 + 运行状态徽标
+- 默认态：**54px 宽 icon-only 竖条**，只显示图标 + 选中指示条
+- Hover/展开态：**188px 宽**，图标 + 文字 + 运行状态 capsule
 - 过渡动画：`width 0.25s cubic-bezier(0.4,0,0.2,1)`
 - 选中项左边缘有 **3px 紫色竖条指示器**（替代背景高亮）
-- 底部放退出按钮（从 header 移走），header 只保留 logo + 全局状态
+- 底部放退出按钮；全局运行状态内嵌到 sidebar 顶部 capsule（无独立顶栏）
 
-**效果**: 内容区从 `calc(100% - 180px)` 增长到 `calc(100% - 64px)`，多出 116px 给卡片和流水线。
+**效果**: 内容区占据 `calc(100% - 54px)`（展开时 `calc(100% - 188px)`），首屏直接进入工作区。
 
 ### 1.2 机器页 → 横向机器看板
 
@@ -93,6 +93,8 @@
 
 ### 2.2 GPU 信息 → 数据仪表盘风格
 
+状态：**已实现**
+
 **改动文件**: `MachineCard.tsx`
 
 - GPU 概览格子：增加 **圆环进度指示器** 替代横条（利用率）
@@ -104,6 +106,8 @@
 
 ### 2.3 状态标签 → 带图标的 Pill Badge
 
+状态：**已实现（简化版）** — pill + 语义色 + pulsing dot；per-status 图标（时钟/check/slash 等）未落地
+
 **改动文件**: `TasksPage.tsx`, `HistoryPage.tsx`, `index.css`
 
 - RUNNING: 绿色 pill + 旋转的小圆环 icon + pulse 边框
@@ -114,6 +118,8 @@
 
 ### 2.4 空状态 → 自定义插图
 
+状态：**部分实现** — 流水线列内已用 `ph-column-empty` 自定义空态；顶层"暂无流水线"仍用 antd `<Empty>`
+
 **改动文件**: `TasksPage.tsx`, `index.css`
 
 - 替换 antd `<Empty>` 为自定义的 **ASCII art 风格空状态**
@@ -121,6 +127,8 @@
 - 整体更 geeky，而不是 antd 的灰色图标
 
 ### 2.5 历史表格 → 紧凑数据视图
+
+状态：**部分实现** — exit-code 已有彩色 badge；`expandedRowRender` 保留 antd 内置展开，非自定义 slide-down；行内时间线未实现
 
 **改动文件**: `HistoryPage.tsx`
 
@@ -203,6 +211,8 @@
 
 ### 4.3 数据色阶
 
+状态：**已实现**
+
 - GPU 利用率/温度: 引入 **5 档色阶** 替代 3 档
   - 0-30%: `#75c181` (cool green)
   - 30-50%: `#a8d86c` (warm green)
@@ -232,6 +242,6 @@
 ## 不改的东西
 
 - 所有业务逻辑、API 调用、状态管理 — 零改动
-- 模态框内部表单结构 — 保持不变（TaskCreateModal, GpuConditionDialog 等）
+- GpuConditionDialog 内部表单结构 — 保持不变
 - 后端 — 零改动
 - 路由结构 — 保持不变
