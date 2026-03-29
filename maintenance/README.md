@@ -10,6 +10,7 @@
 | [monitoring.md](monitoring.md) | cache vs history 双数据结构，采集并发安全，本地/远程采集差异 |
 | [frontend.md](frontend.md) | 前端状态同步模型、主题系统、命令粘贴解析、机器页滚动与拖拽实现 |
 | [frontend_redesign.md](frontend_redesign.md) | 前端重设计方向、已采用的交互思路与后续视觉演进计划 |
+| [light-theme-workbench.md](light-theme-workbench.md) | 浅色主题工作台化复盘：层级规则、顶栏移除原因、后续迭代禁忌与精修顺序 |
 | [known_issues.md](known_issues.md) | 当前功能缺口、已知技术缺陷与待修复风险 |
 ## 测试
 

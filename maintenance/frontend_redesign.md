@@ -5,13 +5,15 @@
 
 ---
 
-## 已落地变更（截至 2026-03-28）
+## 已落地变更（截至 2026-03-29）
 
-- 侧边栏已经切换为收缩式 icon rail，Header 也已经精简到 48px，并把退出按钮移到底部。
+- 侧边栏已经切换为收缩式 icon rail；原先只承担品牌展示的全局 Header 已被移除，桌面端状态摘要收进 sidebar 顶部，移动端改为轻量浮层。
 - 前端已支持深色 / 浅色主题切换，主题模式由 Zustand 持久化，并同步到 Ant Design 和全局 CSS。
 - 机器页已经固定为横向单行机器看板，不再走响应式 grid 方案；顶部使用自绘粗滚动条，底部原生横向滚动条被裁掉。
 - 机器卡片拖拽已经有 grip dots、hover lift、drag overlay 跟手悬浮预览，以及更明确的放置反馈。
 - 任务创建弹窗已支持粘贴完整 shell 命令并自动解析 `work_dir`、`env_vars`、`command`、`args`。
+- 主页面已经统一为 page toolbar + workbench/local surface 的骨架，Machines / Tasks / History / Settings 不再依赖页面大标题来建层级。
+- 浅色主题已经从 shell-first 转向 workbench-first，具体原因与规则见 `maintenance/light-theme-workbench.md`。
 
 ## 现状问题
 
@@ -63,13 +65,15 @@
 
 ### 1.4 Header 精简
 
-状态：**已实现**
+状态：**已废弃并升级为无顶栏骨架**
 
 **改动文件**: `AppLayout.tsx`
 
-- 高度从 52px 降到 **48px**
-- 移除退出按钮（移到侧边栏底部）
-- 右侧改为显示 **全局运行状态概览**：`● 2 running · 3 waiting · 5 machines` 一行 mono 小字
+- 旧方案曾把 Header 压到很薄，但仍然保留了品牌展示横条
+- 最新方案直接移除独立顶栏，避免壳层抢占页面上边缘
+- 全局运行状态概览改为内嵌到 sidebar 顶部；移动端使用轻量浮层承载菜单按钮与状态摘要
+
+**效果**: 页面首屏直接进入各自 toolbar 和工作区，视觉入口从“壳层品牌条”切换为“当前任务区域”。
 
 ---
 

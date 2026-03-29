@@ -79,15 +79,32 @@ cd frontend && npm run dev
 - **前端轮询 5 秒**：TasksPage 每 5s 全量拉取，没有 WebSocket，改了后端数据前端最多延迟 5s 可见
 - **sort_order 在前端反转显示**：DB 中 sort_order 小的任务（队列头）在前端显示在列表底部，见 `maintenance/frontend.md`
 
-## 迭代记录
+## Git 历史即项目记忆
 
-项目的迭代历史以 **git commit message** 为准，不另维护 CHANGELOG 文件。
+本项目不维护 CHANGELOG，**git history 是唯一的迭代记录和决策上下文来源**。在开发过程中必须积极利用：
 
-- 了解某个功能是什么时候、为什么加进来：`git log --oneline` 或 `git log --grep="关键词"`
-- 了解某个文件的变更历史：`git log --oneline -- path/to/file`
-- 了解某次改动的具体内容：`git show <hash>`
+### 何时查 git
 
-在完成一个功能或修复后，commit message 应能独立说明"做了什么、为什么做"，是项目上下文的主要载体。
+- **接手任务前**：`git log --oneline -20` 了解近期方向，避免与刚完成的工作冲突或重复
+- **修改文件前**：`git log --oneline -- path/to/file` 和 `git log -p -3 -- path/to/file` 了解该文件的近期演变意图，不要盲改
+- **遇到不理解的代码**：`git log --all -S "关键代码片段"` 或 `git blame` 找到引入原因
+- **定位 bug**：`git log --oneline --since="3 days ago"` 缩小嫌疑范围，必要时 `git diff HEAD~N` 对比
+- **功能溯源**：`git log --grep="关键词"` 找到功能是何时、为何加入的
+
+### 常用命令速查
+
+| 目的 | 命令 |
+|---|---|
+| 近期全局动态 | `git log --oneline -20` |
+| 某文件变更历史 | `git log --oneline -- <path>` |
+| 某文件最近 N 次 diff | `git log -p -N -- <path>` |
+| 搜索引入某段代码的 commit | `git log --all -S "代码片段"` |
+| 查看某次改动详情 | `git show <hash>` |
+| 按关键词搜 commit message | `git log --grep="关键词"` |
+
+### 写 commit message
+
+完成功能或修复后，commit message 应独立说明"做了什么、为什么做"——它是未来所有上下文恢复的起点。
 
 ---
 
