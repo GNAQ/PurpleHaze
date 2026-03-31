@@ -16,6 +16,9 @@ pip-wheel-metadata/
 # ── 后端运行时数据 ─────────────────────────────────────────────────────────────
 backend/data/
 
+# 前端测试
+.playwright-mcp/
+
 # 前端构建产物（部署时复制到此处）
 backend/static/
 

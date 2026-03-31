@@ -135,6 +135,7 @@ PurpleHaze 想要做得比 FlowLine 更好！
 ./start.sh --prod
 ```
 
+- 前端：http://localhost:34356（同时提供 API 和前端静态文件）
 - 服务：http://localhost:34357（同时提供 API 和前端静态文件）
 - 生产模式不支持仅前端启动
 - 生产日志写入：`logs/backend.prod.YYYYMMDD-HHMMSS.log`
