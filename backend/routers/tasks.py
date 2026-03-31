@@ -24,7 +24,7 @@ from schemas.task import (
     TemplateCreate, TemplateUpdate, TemplateResponse,
     GpuPresetCreate, GpuPresetUpdate, GpuPresetResponse,
     CondaEnvCreate, CondaEnvUpdate, CondaEnvResponse,
-    TaskLogsResponse,
+    TaskLogsResponse, HistoryTaskResponse,
 )
 from services.task_scheduler import task_scheduler
 
@@ -460,7 +460,15 @@ async def delete_conda_env(env_id: int, db: AsyncSession = Depends(get_db)):
 
 # ── 历史任务 ──────────────────────────────────────────────────────────────────
 
-@router.get("/history", response_model=list[TaskBrief])
+def _build_history_response(task: Task, pipelines_map: dict, machines_map: dict) -> HistoryTaskResponse:
+    """从 Task ORM 对象构建带 pipeline_name / machine_name 的响应"""
+    data = TaskBrief.model_validate(task).model_dump()
+    data["pipeline_name"] = pipelines_map.get(task.pipeline_id) if task.pipeline_id else None
+    data["machine_name"] = machines_map.get(task.machine_id) if task.machine_id else None
+    return HistoryTaskResponse(**data)
+
+
+@router.get("/history", response_model=list[HistoryTaskResponse])
 async def list_history(
     limit: int = 50,
     offset: int = 0,
@@ -473,7 +481,21 @@ async def list_history(
         query = select(Task).where(Task.status == status_filter)
     query = query.order_by(Task.finished_at.desc()).limit(limit).offset(offset)
     result = await db.execute(query)
-    return [TaskBrief.model_validate(t) for t in result.scalars().all()]
+    tasks = result.scalars().all()
+
+    # 批量查 pipeline / machine 名称
+    pl_ids = {t.pipeline_id for t in tasks if t.pipeline_id}
+    m_ids = {t.machine_id for t in tasks if t.machine_id}
+    pipelines_map: dict[int, str] = {}
+    machines_map: dict[int, str] = {}
+    if pl_ids:
+        pl_result = await db.execute(select(Pipeline).where(Pipeline.id.in_(pl_ids)))
+        pipelines_map = {p.id: p.name for p in pl_result.scalars().all()}
+    if m_ids:
+        m_result = await db.execute(select(Machine).where(Machine.id.in_(m_ids)))
+        machines_map = {m.id: m.name for m in m_result.scalars().all()}
+
+    return [_build_history_response(t, pipelines_map, machines_map) for t in tasks]
 
 
 @router.get("/history/count")
@@ -488,3 +510,22 @@ async def history_count(
         query = select(func.count()).select_from(Task).where(Task.status == status_filter)
     result = await db.execute(query)
     return {"count": result.scalar_one()}
+
+
+@router.get("/{task_id}/detail", response_model=HistoryTaskResponse)
+async def get_task_detail(task_id: int, db: AsyncSession = Depends(get_db)):
+    """获取单个任务的完整详情（含 pipeline_name / machine_name）"""
+    task = await db.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    pipelines_map: dict[int, str] = {}
+    machines_map: dict[int, str] = {}
+    if task.pipeline_id:
+        pl = await db.get(Pipeline, task.pipeline_id)
+        if pl:
+            pipelines_map[pl.id] = pl.name
+    if task.machine_id:
+        m = await db.get(Machine, task.machine_id)
+        if m:
+            machines_map[m.id] = m.name
+    return _build_history_response(task, pipelines_map, machines_map)

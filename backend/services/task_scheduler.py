@@ -261,12 +261,19 @@ class TaskScheduler:
                 conda_name = conda_env.name
                 conda_path = conda_env.path or None  # 空字符串转为 None
 
+        # 预构建命令字符串，存入 rendered_command
+        try:
+            rendered_cmd = _build_command(task.config or {}, conda_path, conda_name, gpu_ids)
+        except Exception:
+            rendered_cmd = None
+
         # 更新任务状态为 RUNNING
         await db.execute(
             update(Task).where(Task.id == task.id).values(
                 status=TaskStatus.RUNNING,
                 started_at=datetime.utcnow(),
                 assigned_gpu_ids=gpu_ids,
+                rendered_command=rendered_cmd,
             )
         )
         await db.commit()

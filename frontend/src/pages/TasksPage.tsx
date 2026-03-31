@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Button, Card, Space, Tag, Typography, Spin, Empty, Modal, Input,
   message, Tooltip, Popconfirm, Badge, Collapse, Descriptions, Tabs,
 } from 'antd'
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, StopOutlined, ReloadOutlined,
-  FileTextOutlined, HolderOutlined, LoadingOutlined, UploadOutlined,
+  FileTextOutlined, HolderOutlined, LoadingOutlined, UploadOutlined, HistoryOutlined,
 } from '@ant-design/icons'
 import {
   DndContext, DragEndEvent, PointerSensor, KeyboardSensor, useSensor, useSensors, closestCenter,
@@ -63,6 +64,7 @@ function SortableItem({
 }
 
 export default function TasksPage() {
+  const navigate = useNavigate()
   const { t, isDark } = useTheme()
   const STATUS_CONFIG = getStatusConfig(t)
 
@@ -335,11 +337,17 @@ export default function TasksPage() {
                 </Tooltip>
               </>
             )}
-            {(task.status === 'completed' || task.status === 'failed') && (
-              <Tooltip title="查看日志">
-                <Button type="text" size="small" icon={<FileTextOutlined />}
-                  onClick={() => handleViewLogs(task)} />
-              </Tooltip>
+            {(task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') && (
+              <>
+                <Tooltip title="查看日志">
+                  <Button type="text" size="small" icon={<FileTextOutlined />}
+                    onClick={() => handleViewLogs(task)} />
+                </Tooltip>
+                <Tooltip title="在历史中查看详情">
+                  <Button type="text" size="small" icon={<HistoryOutlined />}
+                    onClick={() => navigate(`/history?task=${task.id}`)} />
+                </Tooltip>
+              </>
             )}
           </Space>
         </div>

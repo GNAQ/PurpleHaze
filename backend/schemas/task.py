@@ -59,6 +59,7 @@ class TaskBrief(BaseModel):
     assigned_gpu_ids: list | None
     pid: int | None
     exit_code: int | None
+    rendered_command: str | None = None
     # 调度器写入的错误/元数据，前端据此展示失败原因
     meta: dict | None = None
     created_at: datetime
@@ -66,6 +67,12 @@ class TaskBrief(BaseModel):
     finished_at: datetime | None
 
     model_config = {"from_attributes": True}
+
+
+class HistoryTaskResponse(TaskBrief):
+    """历史任务响应，额外包含 pipeline_name 和 machine_name"""
+    pipeline_name: str | None = None
+    machine_name: str | None = None
 
 
 class PipelineResponse(BaseModel):

@@ -369,8 +369,8 @@ export default function AppLayout() {
             <Route path="/" element={<MachinesPage />} />
             <Route path="/machines" element={<MachinesPage />} />
             <Route path="/tasks" element={<TasksPage />} />
-            <Route path="/history" element={<div style={{ height: '100%', overflowY: 'auto' }}><HistoryPage /></div>} />
-            <Route path="/settings" element={<div style={{ height: '100%', overflowY: 'auto' }}><SettingsPage /></div>} />
+            <Route path="/history" element={<div style={{ height: '100%', overflowY: 'auto', overflowX: 'hidden' }}><HistoryPage /></div>} />
+            <Route path="/settings" element={<div style={{ height: '100%', overflowY: 'auto', overflowX: 'hidden' }}><SettingsPage /></div>} />
           </Routes>
         </div>
       </main>

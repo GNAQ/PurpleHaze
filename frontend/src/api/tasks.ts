@@ -44,10 +44,16 @@ export interface Task {
   assigned_gpu_ids: number[] | null
   pid: number | null
   exit_code: number | null
+  rendered_command: string | null
   meta: Record<string, any> | null
   created_at: string
   started_at: string | null
   finished_at: string | null
+}
+
+export interface HistoryTask extends Task {
+  pipeline_name: string | null
+  machine_name: string | null
 }
 
 export interface Pipeline {
@@ -180,8 +186,9 @@ export const tasksApi = {
 
   // 历史
   listHistory: (params?: { limit?: number; offset?: number; status_filter?: string }) =>
-    client.get<Task[]>('/tasks/history', { params }),
+    client.get<HistoryTask[]>('/tasks/history', { params }),
   historyCount: (params?: { status_filter?: string }) => client.get<{ count: number }>('/tasks/history/count', { params }),
+  getTaskDetail: (id: number) => client.get<HistoryTask>(`/tasks/${id}/detail`),
 
   // 文件浏览
   browse: (path: string, machineId?: number) =>

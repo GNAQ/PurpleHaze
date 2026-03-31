@@ -58,6 +58,8 @@ MIGRATIONS: list[tuple[int, str, "str | Callable | None"]] = [
     (1, "基线版本（init_db 已通过 SQLAlchemy create_all 创建所有初始表）", None),
     (2, "task_template 表增加 machine_id 字段", _m2_add_template_machine_id),
     (3, "machine 表增加跳板机（ProxyJump）字段", _m3_add_proxy_jump_fields),
+    (4, "task 表增加 rendered_command 字段",
+     lambda db: _add_column_if_missing(db, "task", "rendered_command", "TEXT")),
 ]
 
 

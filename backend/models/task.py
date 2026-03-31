@@ -99,6 +99,8 @@ class Task(Base):
     stderr_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     exit_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # 实际执行的完整 shell 命令（由 _build_command 生成）
+    rendered_command: Mapped[str | None] = mapped_column(Text, nullable=True)
     # 扩展元数据（错误信息或远程任务信息，如 {remote_pid, ...} / {error: ...}）
     meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 

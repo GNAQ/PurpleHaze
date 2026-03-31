@@ -340,6 +340,14 @@ html[data-theme="light"] .ph-glass-hover:hover {
   --ph-page-accent-a: rgba(171,93,170,0.16);
   --ph-page-accent-b: rgba(119,198,126,0.14);
 }
+.ph-page-shell--history {
+  height: auto;
+  min-height: 100%;
+}
+.ph-page-shell--history .ph-page-content {
+  overflow: visible;
+  flex: none;
+}
 
 .ph-page-shell--settings {
   --ph-page-accent-a: rgba(190,88,171,0.18);
