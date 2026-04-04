@@ -96,8 +96,8 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
           {/* VRAM bar */}
           <div style={{ marginBottom: 3 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
-              <span style={{ fontSize: 9, color: t.textTer }}>VRAM</span>
-              <span className="ph-mono" style={{ fontSize: 9, color: t.textSec }}>{fmtMB(gpu.memory_used_mb)}</span>
+              <span className="ph-mono" style={{ fontSize: 9, fontWeight: 600, color: isDark ? ph.purple400 : ph.purple700, whiteSpace: 'nowrap', letterSpacing: 0.3 }}>VRAM</span>
+              <span className="ph-mono" style={{ fontSize: 9, color: t.textSec, whiteSpace: 'nowrap' }}>{fmtMB(gpu.memory_used_mb)}</span>
             </div>
             <div style={{ height: 3, borderRadius: 2, background: isDark ? 'rgba(188,115,173,0.08)' : 'rgba(83,42,86,0.10)', position: 'relative' }}>
               <div style={{ width: `${Math.min(100, vramPct)}%`, height: '100%', background: utilColor(vramPct), borderRadius: 2, transition: 'width 0.5s ease' }} />
@@ -114,8 +114,8 @@ function GpuGridCell({ gpu }: { gpu: GpuInfo }) {
           {gpu.power_draw_w != null && gpu.power_limit_w != null && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
-                <span style={{ fontSize: 9, color: t.textTer }}>PWR</span>
-                <span className="ph-mono" style={{ fontSize: 9, color: t.textSec }}>{gpu.power_draw_w.toFixed(0)}W</span>
+                <span className="ph-mono" style={{ fontSize: 9, fontWeight: 600, color: isDark ? ph.purple400 : ph.purple700, whiteSpace: 'nowrap', letterSpacing: 0.3 }}>PWR</span>
+                <span className="ph-mono" style={{ fontSize: 9, color: t.textSec, whiteSpace: 'nowrap' }}>{gpu.power_draw_w.toFixed(0)}W</span>
               </div>
               <div style={{ height: 3, borderRadius: 2, background: isDark ? 'rgba(188,115,173,0.08)' : 'rgba(83,42,86,0.10)', position: 'relative' }}>
                 <div style={{
