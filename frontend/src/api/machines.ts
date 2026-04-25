@@ -1,5 +1,25 @@
 import client from './client'
 
+export interface MachineCondaEnv {
+  id: number
+  machine_id: number | null
+  name: string
+  path: string
+  source: string
+  last_seen_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MachineCondaEnvProbeResult {
+  machine_id: number
+  created_count: number
+  updated_count: number
+  removed_count: number
+  warning?: string | null
+  envs: MachineCondaEnv[]
+}
+
 export interface Machine {
   id: number
   name: string
@@ -58,6 +78,11 @@ export const machinesApi = {
   get: (id: number) => client.get<Machine>(`/machines/${id}`),
   update: (id: number, data: MachineUpdate) => client.put<Machine>(`/machines/${id}`, data),
   delete: (id: number) => client.delete(`/machines/${id}`),
+  listCondaEnvs: (id: number) => client.get<MachineCondaEnv[]>(`/machines/${id}/conda-envs`),
+  registerCondaEnv: (id: number, data: { name: string; path?: string }) =>
+    client.post<MachineCondaEnv>(`/machines/${id}/conda-envs`, data),
+  probeCondaEnvs: (id: number) =>
+    client.post<MachineCondaEnvProbeResult>(`/machines/${id}/conda-envs/probe`),
   connect: (id: number) => client.post<ConnectionStatus>(`/machines/${id}/connect`),
   disconnect: (id: number) => client.post<ConnectionStatus>(`/machines/${id}/disconnect`),
   getSnapshot: (id: number) =>

@@ -9,7 +9,7 @@ import {
 } from 'antd'
 import {
   PlusOutlined, DeleteOutlined, FolderOpenOutlined, ThunderboltOutlined,
-  SaveOutlined, ImportOutlined,
+  SaveOutlined, ImportOutlined, ReloadOutlined,
 } from '@ant-design/icons'
 import { Machine, machinesApi } from '../api/machines'
 import {
@@ -179,6 +179,8 @@ export default function TaskCreateModal({
   const [selectedMachineId, setSelectedMachineId] = useState<number | null>(null)
   const [gpuCondition, setGpuCondition] = useState<GpuCondition | null>(null)
   const [condaEnvs, setCondaEnvs] = useState<CondaEnv[]>([])
+  const [condaLoading, setCondaLoading] = useState(false)
+  const [probingCondaEnvs, setProbingCondaEnvs] = useState(false)
   const [templates, setTemplates] = useState<TaskTemplate[]>([])
   const [args, setArgs] = useState<{ name: string; value: string }[]>([])
   const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([])
@@ -207,11 +209,11 @@ export default function TaskCreateModal({
 
   useEffect(() => {
     if (open) {
-      loadCondaEnvs()
-      loadTemplates()
+      void loadTemplates()
       if (initialTask) {
         const config = initialTask.config || {}
-        setSelectedMachineId(initialTask.machine_id)
+        const initialMachineId = initialTask.machine_id ?? null
+        setSelectedMachineId(initialMachineId)
         setGpuCondition(initialTask.gpu_condition)
         const envVarList = Object.entries(config.env_vars || {}).map(([k, v]) => ({ key: k, value: v }))
         setEnvVars(envVarList)
@@ -224,8 +226,9 @@ export default function TaskCreateModal({
           work_dir: config.work_dir || '',
           command: config.command || '',
         })
-        // 获取该机器的 GPU 数量
-        if (initialTask.machine_id) fetchGpuCount(initialTask.machine_id)
+        if (initialMachineId) fetchGpuCount(initialMachineId)
+        else setGpuCount(0)
+        void loadCondaEnvs(initialMachineId)
       } else {
         form.resetFields()
         setSelectedMachineId(null)
@@ -233,6 +236,7 @@ export default function TaskCreateModal({
         setArgs([])
         setEnvVars([])
         setGpuCount(0)
+        void loadCondaEnvs(null)
         // 预填流水线
         if (defaultPipelineId != null) {
           form.setFieldsValue({ pipeline_id: defaultPipelineId })
@@ -243,8 +247,25 @@ export default function TaskCreateModal({
     }
   }, [open])
 
-  async function loadCondaEnvs() {
-    try { setCondaEnvs((await tasksApi.listCondaEnvs()).data) } catch {}
+  async function loadCondaEnvs(machineId?: number | null) {
+    setCondaLoading(true)
+    try {
+      const res = machineId == null
+        ? await tasksApi.listCondaEnvs()
+        : await tasksApi.listCondaEnvs({ machine_id: machineId })
+      const nextEnvs = machineId == null
+        ? res.data.filter((env) => env.machine_id == null)
+        : res.data
+      setCondaEnvs(nextEnvs)
+      const currentCondaEnvId = form.getFieldValue('conda_env_id')
+      if (currentCondaEnvId && !nextEnvs.some((env) => env.id === currentCondaEnvId)) {
+        form.setFieldValue('conda_env_id', undefined)
+      }
+    } catch {
+      setCondaEnvs([])
+    } finally {
+      setCondaLoading(false)
+    }
   }
   async function loadTemplates() {
     try {
@@ -259,6 +280,32 @@ export default function TaskCreateModal({
       setGpuCount(res.data.gpus?.length ?? 0)
     } catch {
       setGpuCount(0)
+    }
+  }
+
+  async function handleProbeCondaEnvs() {
+    if (!selectedMachineId) {
+      message.warning('请先选择运行机器')
+      return
+    }
+    const machine = machines.find((item) => item.id === selectedMachineId)
+    if (machine && !machine.is_local && !machine.connected) {
+      message.warning(`远程机器 "${machine.name}" 未连接，请先在机器页建立连接`)
+      return
+    }
+    setProbingCondaEnvs(true)
+    try {
+      const res = await machinesApi.probeCondaEnvs(selectedMachineId)
+      setCondaEnvs(res.data.envs)
+      const currentCondaEnvId = form.getFieldValue('conda_env_id')
+      if (currentCondaEnvId && !res.data.envs.some((env) => env.id === currentCondaEnvId)) {
+        form.setFieldValue('conda_env_id', undefined)
+      }
+      message.success(`当前机器环境已刷新：新增 ${res.data.created_count}，更新 ${res.data.updated_count}`)
+    } catch (e: any) {
+      message.error(e.response?.data?.detail ?? '刷新失败')
+    } finally {
+      setProbingCondaEnvs(false)
     }
   }
 
@@ -279,7 +326,12 @@ export default function TaskCreateModal({
       form.setFieldsValue({ machine_id: tpl.machine_id })
       setSelectedMachineId(tpl.machine_id)
       fetchGpuCount(tpl.machine_id)
+    } else {
+      form.setFieldValue('machine_id', undefined)
+      setSelectedMachineId(null)
+      setGpuCount(0)
     }
+    void loadCondaEnvs(tpl.machine_id ?? null)
     setSelectedTemplateId(tpl.id)
     setSaveTemplateName(tpl.name)
     message.success(`已加载模板: ${tpl.name}`)
@@ -326,15 +378,6 @@ export default function TaskCreateModal({
     } finally {
       setSavingTemplate(false)
     }
-  }
-
-  async function handleAddCondaEnv() {
-    message.info('请到设置页管理 Conda 环境')
-  }
-
-  async function handleDeleteCondaEnv(id: number) {
-    try { await tasksApi.deleteCondaEnv(id); loadCondaEnvs() }
-    catch { message.error('删除失败') }
   }
 
   async function handleDeleteTemplate(id: number) {
@@ -631,6 +674,8 @@ export default function TaskCreateModal({
                                 }))}
                                 onChange={(v) => {
                                   setSelectedMachineId(v)
+                                  form.setFieldValue('conda_env_id', undefined)
+                                  void loadCondaEnvs(v ?? null)
                                   if (v) fetchGpuCount(v)
                                   else setGpuCount(0)
                                 }}
@@ -651,18 +696,28 @@ export default function TaskCreateModal({
                                 <Select
                                   placeholder="不使用 Conda 环境"
                                   allowClear
-                                  options={condaEnvs.map((e) => ({ label: `${e.name} (${e.path})`, value: e.id }))}
+                                  loading={condaLoading}
+                                  options={condaEnvs.map((e) => ({
+                                    label: `${e.name} (${e.path || `conda activate ${e.name}`})`,
+                                    value: e.id,
+                                  }))}
                                   style={{ width: '100%' }}
                                 />
                               </Form.Item>
+                              <Button
+                                icon={<ReloadOutlined />}
+                                loading={probingCondaEnvs}
+                                disabled={!selectedMachineId || (!!selectedMachine && !selectedMachine.is_local && !selectedMachine.connected)}
+                                onClick={() => { void handleProbeCondaEnvs() }}
+                              >
+                                探测此机
+                              </Button>
                             </Space.Compact>
-                            <Typography.Link
-                              href="#"
-                              style={{ fontSize: 12, marginTop: 4, display: 'block' }}
-                              onClick={(e) => { e.preventDefault(); onClose() }}
-                            >
-                              在「设置」页管理 Conda 环境 →
-                            </Typography.Link>
+                            <Typography.Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
+                              {selectedMachineId
+                                ? '优先在机器页维护机器级环境；这里的探测会刷新当前机器的 Conda inventory。'
+                                : '未选机器时只显示全局兼容环境；选中机器后会补充该机器的 inventory。'}
+                            </Typography.Text>
                           </Form.Item>
 
                           <div className="ph-task-modal-panel" style={{ padding: 12 }}>

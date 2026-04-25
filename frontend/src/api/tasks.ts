@@ -83,9 +83,13 @@ export interface GpuPreset {
 
 export interface CondaEnv {
   id: number
+  machine_id: number | null
   name: string
   path: string
+  source: string
+  last_seen_at: string | null
   created_at: string
+  updated_at: string
 }
 
 export interface TaskLogsResponse {
@@ -177,8 +181,9 @@ export const tasksApi = {
   deleteGpuPreset: (id: number) => client.delete(`/tasks/gpu-presets/${id}`),
 
   // Conda 环境
-  listCondaEnvs: () => client.get<CondaEnv[]>('/tasks/conda-envs'),
-  createCondaEnv: (data: { name: string; path?: string }) =>
+  listCondaEnvs: (params?: { machine_id?: number }) =>
+    client.get<CondaEnv[]>('/tasks/conda-envs', { params }),
+  createCondaEnv: (data: { name: string; path?: string; machine_id?: number | null }) =>
     client.post<CondaEnv>('/tasks/conda-envs', data),
   updateCondaEnv: (id: number, data: { name?: string; path?: string }) =>
     client.put<CondaEnv>(`/tasks/conda-envs/${id}`, data),

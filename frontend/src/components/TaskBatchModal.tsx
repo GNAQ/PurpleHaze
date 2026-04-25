@@ -3,7 +3,7 @@ import {
   Modal, Form, Input, Select, Button, Space, Upload, Typography, message,
 } from 'antd'
 import {
-  UploadOutlined, ThunderboltOutlined, FolderOpenOutlined,
+  UploadOutlined, ThunderboltOutlined, FolderOpenOutlined, ReloadOutlined,
 } from '@ant-design/icons'
 import { Machine, machinesApi } from '../api/machines'
 import {
@@ -27,6 +27,8 @@ export default function TaskBatchModal({
   const [form] = Form.useForm()
   const [submitting, setSubmitting] = useState(false)
   const [condaEnvs, setCondaEnvs] = useState<CondaEnv[]>([])
+  const [condaLoading, setCondaLoading] = useState(false)
+  const [probingCondaEnvs, setProbingCondaEnvs] = useState(false)
   const [commands, setCommands] = useState<string[]>([])
   const [selectedMachineId, setSelectedMachineId] = useState<number | null>(null)
   const [gpuCount, setGpuCount] = useState(0)
@@ -43,14 +45,27 @@ export default function TaskBatchModal({
     setGpuCount(0)
     setGpuCondition(null)
     setPendingValues(null)
-    void loadCondaEnvs()
+    void loadCondaEnvs(null)
   }, [open])
 
-  async function loadCondaEnvs() {
+  async function loadCondaEnvs(machineId?: number | null) {
+    setCondaLoading(true)
     try {
-      setCondaEnvs((await tasksApi.listCondaEnvs()).data)
+      const res = machineId == null
+        ? await tasksApi.listCondaEnvs()
+        : await tasksApi.listCondaEnvs({ machine_id: machineId })
+      const nextEnvs = machineId == null
+        ? res.data.filter((env) => env.machine_id == null)
+        : res.data
+      setCondaEnvs(nextEnvs)
+      const currentCondaEnvId = form.getFieldValue('conda_env_id')
+      if (currentCondaEnvId && !nextEnvs.some((env) => env.id === currentCondaEnvId)) {
+        form.setFieldValue('conda_env_id', undefined)
+      }
     } catch {
       setCondaEnvs([])
+    } finally {
+      setCondaLoading(false)
     }
   }
 
@@ -60,6 +75,32 @@ export default function TaskBatchModal({
       setGpuCount(res.data.gpus?.length ?? 0)
     } catch {
       setGpuCount(0)
+    }
+  }
+
+  async function handleProbeCondaEnvs() {
+    if (!selectedMachineId) {
+      message.warning('请先选择运行机器')
+      return
+    }
+    const machine = machines.find((item) => item.id === selectedMachineId)
+    if (machine && !machine.is_local && !machine.connected) {
+      message.warning(`远程机器 "${machine.name}" 未连接，请先在机器页建立连接`)
+      return
+    }
+    setProbingCondaEnvs(true)
+    try {
+      const res = await machinesApi.probeCondaEnvs(selectedMachineId)
+      setCondaEnvs(res.data.envs)
+      const currentCondaEnvId = form.getFieldValue('conda_env_id')
+      if (currentCondaEnvId && !res.data.envs.some((env) => env.id === currentCondaEnvId)) {
+        form.setFieldValue('conda_env_id', undefined)
+      }
+      message.success(`当前机器环境已刷新：新增 ${res.data.created_count}，更新 ${res.data.updated_count}`)
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || '刷新失败')
+    } finally {
+      setProbingCondaEnvs(false)
     }
   }
 
@@ -140,6 +181,8 @@ export default function TaskBatchModal({
     }
   }
 
+  const selectedMachine = machines.find((machine) => machine.id === selectedMachineId)
+
   return (
     <>
       <Modal
@@ -188,18 +231,41 @@ export default function TaskBatchModal({
               }))}
               onChange={(v) => {
                 setSelectedMachineId(v)
+                form.setFieldValue('conda_env_id', undefined)
+                void loadCondaEnvs(v ?? null)
                 if (v) fetchGpuCount(v)
                 else setGpuCount(0)
               }}
             />
           </Form.Item>
 
-          <Form.Item name="conda_env_id" label="Conda 环境">
-            <Select
-              placeholder="不使用 Conda 环境"
-              allowClear
-              options={condaEnvs.map((e) => ({ label: `${e.name} (${e.path})`, value: e.id }))}
-            />
+          <Form.Item
+            name="conda_env_id"
+            label="Conda 环境"
+            extra={selectedMachineId
+              ? '优先在机器页维护机器级环境；这里的探测会刷新当前机器的 inventory。'
+              : '未选机器时只显示全局兼容环境；选中机器后会补充该机器的 inventory。'}
+          >
+            <Space.Compact style={{ width: '100%' }}>
+              <Select
+                placeholder="不使用 Conda 环境"
+                allowClear
+                loading={condaLoading}
+                options={condaEnvs.map((e) => ({
+                  label: `${e.name} (${e.path || `conda activate ${e.name}`})`,
+                  value: e.id,
+                }))}
+                style={{ width: '100%' }}
+              />
+              <Button
+                icon={<ReloadOutlined />}
+                loading={probingCondaEnvs}
+                disabled={!selectedMachineId || (!!selectedMachine && !selectedMachine.is_local && !selectedMachine.connected)}
+                onClick={() => { void handleProbeCondaEnvs() }}
+              >
+                探测此机
+              </Button>
+            </Space.Compact>
           </Form.Item>
 
           <Form.Item

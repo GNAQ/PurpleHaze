@@ -9,6 +9,8 @@ import { useTheme } from '../theme/useTheme'
 
 const { Text } = Typography
 
+const filterGlobalCondaEnvs = (envs: CondaEnv[]) => envs.filter((env) => env.machine_id == null)
+
 export default function SettingsPage() {
   const { t } = useTheme()
   const [pwdForm] = Form.useForm()
@@ -29,13 +31,16 @@ export default function SettingsPage() {
       .catch(() => { /* 暂无配置 */ })
       .finally(() => setSettingsLoading(false))
     tasksApi.listCondaEnvs()
-      .then((res) => setCondaEnvs(res.data))
+      .then((res) => setCondaEnvs(filterGlobalCondaEnvs(res.data)))
       .catch(() => {})
       .finally(() => setCondaLoading(false))
   }, [])
 
   const loadCondaEnvs = async () => {
-    try { const r = await tasksApi.listCondaEnvs(); setCondaEnvs(r.data) } catch (_) {}
+    try {
+      const r = await tasksApi.listCondaEnvs()
+      setCondaEnvs(filterGlobalCondaEnvs(r.data))
+    } catch (_) {}
   }
 
   const handleAddCondaEnv = async (values: { name: string; path?: string }) => {
@@ -84,7 +89,7 @@ export default function SettingsPage() {
         <div className="ph-page-rail">
           <span className="ph-page-chip ph-page-chip--accent">密码与认证</span>
           <span className="ph-page-chip">运行配置</span>
-          <span className="ph-page-chip">Conda 环境</span>
+          <span className="ph-page-chip">全局 Conda</span>
         </div>
       </div>
 
@@ -157,7 +162,7 @@ export default function SettingsPage() {
             </div>
 
             <Card
-              title="Conda 环境"
+              title="全局 Conda 环境（兼容模式）"
               className="ph-glass-card"
               extra={
                 <Button size="small" icon={<PlusOutlined />} onClick={() => setCondaAdding((v) => !v)}>
@@ -167,6 +172,9 @@ export default function SettingsPage() {
             >
               {condaLoading ? <Spin /> : (
                 <>
+                  <Text style={{ display: 'block', marginBottom: 12, color: t.textSec }}>
+                    机器级 Conda inventory 的主入口已经迁到机器页；这里只保留 `machine_id = NULL` 的全局兼容环境，主要用于历史任务和跨机通用记录。
+                  </Text>
                   {condaAdding && (
                     <Form form={condaForm} layout="inline" onFinish={handleAddCondaEnv} style={{ marginBottom: 12 }}>
                       <Form.Item name="name" rules={[{ required: true, message: '请输入名称' }]}> 
