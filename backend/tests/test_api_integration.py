@@ -8,6 +8,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
+from services.runtime_env_service import runtime_env_service
 from tests.conftest import (
     TEST_PASSWORD,
     create_local_machine,
@@ -400,6 +401,108 @@ class TestCondaEnvs:
         resp = await client.delete(f"/api/tasks/conda-envs/{eid}", headers=auth_headers)
         assert resp.status_code == 204
 
+    async def test_machine_scoped_probe_and_register(self, client, auth_headers, monkeypatch):
+        machine_resp = await client.post(
+            "/api/machines",
+            json={"name": "ProbeMachine", "is_local": True},
+            headers=auth_headers,
+        )
+        assert machine_resp.status_code == 201
+        machine_id = machine_resp.json()["id"]
+
+        async def fake_local_probe():
+            return '{"envs": ["/opt/conda", "/opt/conda/envs/torch2"]}', ""
+
+        monkeypatch.setattr(runtime_env_service, "_run_local_probe", fake_local_probe)
+
+        resp = await client.post(
+            f"/api/machines/{machine_id}/conda-envs/probe",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["machine_id"] == machine_id
+        assert data["created_count"] == 2
+        assert {env["name"] for env in data["envs"]} == {"base", "torch2"}
+        assert all(env["machine_id"] == machine_id for env in data["envs"])
+        assert all(env["source"] == "probe" for env in data["envs"])
+
+        register_resp = await client.post(
+            f"/api/machines/{machine_id}/conda-envs",
+            json={"name": "manual-env", "path": "/srv/conda/envs/manual-env"},
+            headers=auth_headers,
+        )
+        assert register_resp.status_code == 201
+        assert register_resp.json()["machine_id"] == machine_id
+        assert register_resp.json()["source"] == "manual"
+
+        name_only_register_resp = await client.post(
+            f"/api/machines/{machine_id}/conda-envs",
+            json={"name": "manual-name-only", "path": ""},
+            headers=auth_headers,
+        )
+        assert name_only_register_resp.status_code == 201
+        assert name_only_register_resp.json()["machine_id"] == machine_id
+        assert name_only_register_resp.json()["source"] == "manual"
+        assert name_only_register_resp.json()["path"] == ""
+
+        async def fake_local_probe_second_round():
+            return '{"envs": ["/opt/conda"]}', ""
+
+        monkeypatch.setattr(runtime_env_service, "_run_local_probe", fake_local_probe_second_round)
+        resp = await client.post(
+            f"/api/machines/{machine_id}/conda-envs/probe",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["removed_count"] == 1
+        names = {env["name"] for env in data["envs"]}
+        assert names == {"base", "manual-env", "manual-name-only"}
+
+    async def test_task_rejects_conda_env_from_other_machine(self, client, auth_headers):
+        source_machine = await client.post(
+            "/api/machines",
+            json={"name": "M1", "is_local": True},
+            headers=auth_headers,
+        )
+        target_machine = await client.post(
+            "/api/machines",
+            json={"name": "M2", "is_local": True},
+            headers=auth_headers,
+        )
+        assert source_machine.status_code == 201
+        assert target_machine.status_code == 201
+
+        source_machine_id = source_machine.json()["id"]
+        target_machine_id = target_machine.json()["id"]
+
+        env_resp = await client.post(
+            f"/api/machines/{source_machine_id}/conda-envs",
+            json={"name": "torch2", "path": "/opt/conda/envs/torch2"},
+            headers=auth_headers,
+        )
+        assert env_resp.status_code == 201
+        env_id = env_resp.json()["id"]
+
+        resp = await client.post(
+            "/api/tasks",
+            json={
+                "name": "bad-task",
+                "machine_id": target_machine_id,
+                "config": {
+                    "command": "python train.py",
+                    "conda_env_id": env_id,
+                    "env_vars": {},
+                    "work_dir": "",
+                    "args": [],
+                },
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 400
+        assert "不属于当前机器" in resp.json()["detail"]
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # GPU presets
@@ -448,6 +551,44 @@ class TestTemplates:
             headers=auth_headers,
         )
         assert resp.json()["name"] == "训练模板v2"
+
+    async def test_template_persists_machine_scoped_conda_env(self, client, auth_headers):
+        machine_resp = await client.post(
+            "/api/machines",
+            json={"name": "TplMachine", "is_local": True},
+            headers=auth_headers,
+        )
+        assert machine_resp.status_code == 201
+        machine_id = machine_resp.json()["id"]
+
+        env_resp = await client.post(
+            f"/api/machines/{machine_id}/conda-envs",
+            json={"name": "torch2", "path": "/opt/conda/envs/torch2"},
+            headers=auth_headers,
+        )
+        assert env_resp.status_code == 201
+        env_id = env_resp.json()["id"]
+
+        resp = await client.post(
+            "/api/tasks/templates",
+            json={
+                "name": "模板机环境",
+                "machine_id": machine_id,
+                "config": {
+                    "conda_env_id": env_id,
+                    "command": "python train.py",
+                    "env_vars": {},
+                    "work_dir": "",
+                    "args": [],
+                },
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        tid = data["id"]
+        assert data["machine_id"] == machine_id
+        assert data["config"]["conda_env_id"] == env_id
 
         resp = await client.delete(f"/api/tasks/templates/{tid}", headers=auth_headers)
         assert resp.status_code == 204

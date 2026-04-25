@@ -13,8 +13,10 @@ from schemas.machine import (
     MachineCreate, MachineUpdate, MachineResponse,
     ConnectionStatus, MachineListResponse,
 )
+from schemas.task import CondaEnvCreate, CondaEnvProbeResponse, CondaEnvResponse
 from services.ssh_manager import ssh_manager
 from services.resource_monitor import resource_monitor
+from services.runtime_env_service import runtime_env_service
 from config import DEFAULT_MONITOR_INTERVAL
 
 router = APIRouter(prefix="/api/machines", tags=["machines"],
@@ -91,6 +93,56 @@ async def get_machine(machine_id: int, db: AsyncSession = Depends(get_db)):
     if not machine:
         raise HTTPException(status_code=404, detail="机器不存在")
     return _to_response(machine)
+
+
+@router.get("/{machine_id}/conda-envs", response_model=list[CondaEnvResponse])
+async def list_machine_conda_envs(machine_id: int, db: AsyncSession = Depends(get_db)):
+    machine = await db.get(Machine, machine_id)
+    if not machine:
+        raise HTTPException(status_code=404, detail="机器不存在")
+    envs = await runtime_env_service.list_conda_envs(db, machine_id)
+    return [CondaEnvResponse.model_validate(env) for env in envs]
+
+
+@router.post("/{machine_id}/conda-envs", response_model=CondaEnvResponse, status_code=201)
+async def register_machine_conda_env(
+    machine_id: int,
+    data: CondaEnvCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    machine = await db.get(Machine, machine_id)
+    if not machine:
+        raise HTTPException(status_code=404, detail="机器不存在")
+    try:
+        env = await runtime_env_service.register_conda_env(
+            db,
+            machine,
+            name=data.name,
+            path=data.path,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return CondaEnvResponse.model_validate(env)
+
+
+@router.post("/{machine_id}/conda-envs/probe", response_model=CondaEnvProbeResponse)
+async def probe_machine_conda_envs(machine_id: int, db: AsyncSession = Depends(get_db)):
+    machine = await db.get(Machine, machine_id)
+    if not machine:
+        raise HTTPException(status_code=404, detail="机器不存在")
+    try:
+        result = await runtime_env_service.probe_conda_envs(db, machine)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return CondaEnvProbeResponse(
+        machine_id=result.machine_id,
+        created_count=result.created_count,
+        updated_count=result.updated_count,
+        removed_count=result.removed_count,
+        warning=result.warning,
+        envs=[CondaEnvResponse.model_validate(env) for env in result.envs],
+    )
 
 
 @router.put("/{machine_id}", response_model=MachineResponse)

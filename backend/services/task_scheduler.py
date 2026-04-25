@@ -257,9 +257,34 @@ class TaskScheduler:
         conda_env_id = (task.config or {}).get("conda_env_id")
         if conda_env_id:
             conda_env = await db.get(CondaEnv, conda_env_id)
-            if conda_env:
-                conda_name = conda_env.name
-                conda_path = conda_env.path or None  # 空字符串转为 None
+            if conda_env is None:
+                logger.error(f"[Scheduler] 任务 {task.id} 的 Conda 环境 {conda_env_id} 不存在，标记为失败")
+                await db.execute(
+                    update(Task).where(Task.id == task.id).values(
+                        status=TaskStatus.FAILED,
+                        finished_at=datetime.utcnow(),
+                        meta={"error": "指定的 Conda 环境不存在"},
+                    )
+                )
+                await db.commit()
+                return True
+
+            if conda_env.machine_id is not None and conda_env.machine_id != task.machine_id:
+                logger.error(
+                    f"[Scheduler] 任务 {task.id} 的 Conda 环境 {conda_env_id} 不属于机器 {task.machine_id}，标记为失败"
+                )
+                await db.execute(
+                    update(Task).where(Task.id == task.id).values(
+                        status=TaskStatus.FAILED,
+                        finished_at=datetime.utcnow(),
+                        meta={"error": "指定的 Conda 环境不属于当前机器"},
+                    )
+                )
+                await db.commit()
+                return True
+
+            conda_name = conda_env.name
+            conda_path = conda_env.path or None  # 空字符串转为 None
 
         # 预构建命令字符串，存入 rendered_command
         try:

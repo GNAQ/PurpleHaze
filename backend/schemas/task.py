@@ -177,6 +177,7 @@ class GpuPresetResponse(BaseModel):
 # ── Conda 环境 ────────────────────────────────────────────────────────────────
 
 class CondaEnvCreate(BaseModel):
+    machine_id: int | None = None
     name: str
     path: str = ""  # 空则使用 conda run -n <name>激活
 
@@ -188,9 +189,24 @@ class CondaEnvUpdate(BaseModel):
 
 class CondaEnvResponse(BaseModel):
     id: int
+    machine_id: int | None = None
     name: str
     path: str
+    source: str
+    last_seen_at: datetime | None = None
     created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CondaEnvProbeResponse(BaseModel):
+    machine_id: int
+    created_count: int
+    updated_count: int
+    removed_count: int
+    warning: str | None = None
+    envs: list[CondaEnvResponse]
 
     model_config = {"from_attributes": True}
 

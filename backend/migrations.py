@@ -51,6 +51,20 @@ async def _m3_add_proxy_jump_fields(db: AsyncSession) -> None:
         await _add_column_if_missing(db, "machine", col, definition)
 
 
+async def _m5_add_machine_scoped_conda_env_fields(db: AsyncSession) -> None:
+    cols = [
+        ("machine_id", "INTEGER"),
+        ("source", "VARCHAR(32) NOT NULL DEFAULT 'manual'"),
+        ("last_seen_at", "DATETIME"),
+        ("updated_at", "DATETIME"),
+    ]
+    for col, definition in cols:
+        await _add_column_if_missing(db, "conda_env", col, definition)
+
+    await db.execute(text("UPDATE conda_env SET source = COALESCE(source, 'manual')"))
+    await db.execute(text("UPDATE conda_env SET updated_at = COALESCE(updated_at, created_at, datetime('now'))"))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 迁移列表：(version: int, description: str, sql_or_callable: str | Callable | None)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -60,6 +74,7 @@ MIGRATIONS: list[tuple[int, str, "str | Callable | None"]] = [
     (3, "machine 表增加跳板机（ProxyJump）字段", _m3_add_proxy_jump_fields),
     (4, "task 表增加 rendered_command 字段",
      lambda db: _add_column_if_missing(db, "task", "rendered_command", "TEXT")),
+    (5, "conda_env 表增加 machine-scoped inventory 字段", _m5_add_machine_scoped_conda_env_fields),
 ]
 
 

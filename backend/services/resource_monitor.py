@@ -349,7 +349,7 @@ class ResourceMonitorService:
     # 滚动历史保留时长（分钟）——通过 config 读取，可用环境变量 PPH_HISTORY_RETAIN_MIN 覆盖
     HISTORY_RETAIN_MINUTES = MONITOR_HISTORY_RETAIN_MINUTES
 
-    async def get_snapshot(self, machine_id: int, is_local: bool) -> ResourceSnapshot:
+    async def get_snapshot(self, machine_id: int, is_local: bool, include_processes: bool = False) -> ResourceSnapshot:
         """立即采集并返回快照；若同机器已有采集在途则等待其完成并返回缓存，避免并发重入。"""
         if machine_id in self._in_flight:
             # 等待已在途的采集完成（最多 5s，每 100ms 轮询一次）

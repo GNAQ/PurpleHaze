@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -33,6 +33,28 @@ router = APIRouter(
     tags=["tasks"],
     dependencies=[Depends(get_current_user)],
 )
+
+
+async def _validate_conda_env_assignment(
+    db: AsyncSession,
+    machine_id: int | None,
+    config: dict | None,
+    *,
+    subject: str,
+) -> None:
+    conda_env_id = (config or {}).get("conda_env_id")
+    if not conda_env_id:
+        return
+
+    if machine_id is None:
+        raise HTTPException(status_code=400, detail=f"{subject}指定 Conda 环境时必须同时指定机器")
+
+    env = await db.get(CondaEnv, conda_env_id)
+    if not env:
+        raise HTTPException(status_code=400, detail="所选 Conda 环境不存在")
+
+    if env.machine_id is not None and env.machine_id != machine_id:
+        raise HTTPException(status_code=400, detail="所选 Conda 环境不属于当前机器")
 
 
 # ── 流水线 ───────────────────────────────────────────────────────────────────
@@ -110,6 +132,9 @@ async def delete_pipeline(pid: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("", response_model=TaskBrief)
 async def create_task(data: TaskCreate, db: AsyncSession = Depends(get_db)):
+    config_data = data.config.model_dump() if data.config else None
+    await _validate_conda_env_assignment(db, data.machine_id, config_data, subject="任务")
+
     sort_order = 0
     if data.pipeline_id is not None:
         result = await db.execute(
@@ -123,7 +148,7 @@ async def create_task(data: TaskCreate, db: AsyncSession = Depends(get_db)):
         name=data.name,
         pipeline_id=data.pipeline_id,
         machine_id=data.machine_id,
-        config=data.config.model_dump() if data.config else None,
+        config=config_data,
         gpu_condition=data.gpu_condition,
         sort_order=sort_order,
         status=TaskStatus.WAITING,
@@ -139,6 +164,9 @@ async def create_batch_tasks(data: BatchTaskCreate, db: AsyncSession = Depends(g
     machine_obj = await db.get(Machine, data.machine_id)
     if machine_obj is None:
         raise HTTPException(status_code=404, detail="运行机器不存在")
+
+    base_config = data.config.model_dump()
+    await _validate_conda_env_assignment(db, data.machine_id, base_config, subject="批量任务")
 
     pipeline_ids = list(dict.fromkeys(data.pipeline_ids or []))
     if pipeline_ids:
@@ -175,7 +203,7 @@ async def create_batch_tasks(data: BatchTaskCreate, db: AsyncSession = Depends(g
     created_tasks: list[Task] = []
     for idx, command in enumerate(commands):
         pipeline_id = pipeline_ids[idx % len(pipeline_ids)] if pipeline_ids else None
-        config = data.config.model_dump()
+        config = dict(base_config)
         config["command"] = command
         config["args"] = []
 
@@ -207,6 +235,13 @@ async def update_task(task_id: int, data: TaskUpdate, db: AsyncSession = Depends
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
     if task.status != TaskStatus.RUNNING:
+        next_machine_id = data.machine_id if "machine_id" in data.model_fields_set else task.machine_id
+        if "config" in data.model_fields_set:
+            next_config = data.config.model_dump() if data.config else None
+        else:
+            next_config = task.config
+        await _validate_conda_env_assignment(db, next_machine_id, next_config, subject="任务")
+
         if data.name is not None:
             task.name = data.name
         # 用 model_fields_set 区分「未传」和「显式传 null」，支持将字段清空为 None
@@ -214,8 +249,8 @@ async def update_task(task_id: int, data: TaskUpdate, db: AsyncSession = Depends
             task.pipeline_id = data.pipeline_id
         if "machine_id" in data.model_fields_set:
             task.machine_id = data.machine_id
-        if data.config is not None:
-            task.config = data.config.model_dump()
+        if "config" in data.model_fields_set:
+            task.config = data.config.model_dump() if data.config else None
         if "gpu_condition" in data.model_fields_set:
             task.gpu_condition = data.gpu_condition
     if data.sort_order is not None:
@@ -325,7 +360,13 @@ async def list_templates(db: AsyncSession = Depends(get_db)):
 
 @router.post("/templates", response_model=TemplateResponse)
 async def create_template(data: TemplateCreate, db: AsyncSession = Depends(get_db)):
-    tpl = TaskTemplate(name=data.name, config=data.config, gpu_condition=data.gpu_condition)
+    await _validate_conda_env_assignment(db, data.machine_id, data.config, subject="模板")
+    tpl = TaskTemplate(
+        name=data.name,
+        machine_id=data.machine_id,
+        config=data.config,
+        gpu_condition=data.gpu_condition,
+    )
     db.add(tpl)
     await db.commit()
     await db.refresh(tpl)
@@ -337,6 +378,9 @@ async def update_template(tpl_id: int, data: TemplateUpdate, db: AsyncSession = 
     tpl = await db.get(TaskTemplate, tpl_id)
     if not tpl:
         raise HTTPException(status_code=404, detail="模板不存在")
+    next_machine_id = data.machine_id if "machine_id" in data.model_fields_set else tpl.machine_id
+    next_config = data.config if "config" in data.model_fields_set else tpl.config
+    await _validate_conda_env_assignment(db, next_machine_id, next_config, subject="模板")
     if data.name is not None:
         tpl.name = data.name
     # 用 model_fields_set 区分「未传」和「显式传 null」，支持将字段清空为 None
@@ -406,14 +450,21 @@ async def delete_gpu_preset(preset_id: int, db: AsyncSession = Depends(get_db)):
 # ── Conda 环境 ────────────────────────────────────────────────────────────────
 
 @router.get("/conda-envs", response_model=list[CondaEnvResponse])
-async def list_conda_envs(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(CondaEnv).order_by(CondaEnv.id))
+async def list_conda_envs(machine_id: int | None = None, db: AsyncSession = Depends(get_db)):
+    stmt = select(CondaEnv)
+    if machine_id is not None:
+        stmt = stmt.where(
+            or_(CondaEnv.machine_id == machine_id, CondaEnv.machine_id.is_(None))
+        ).order_by(CondaEnv.machine_id.is_(None), CondaEnv.name, CondaEnv.id)
+    else:
+        stmt = stmt.order_by(CondaEnv.id)
+    result = await db.execute(stmt)
     return [CondaEnvResponse.model_validate(e) for e in result.scalars().all()]
 
 
 @router.post("/conda-envs", response_model=CondaEnvResponse)
 async def create_conda_env(data: CondaEnvCreate, db: AsyncSession = Depends(get_db)):
-    env = CondaEnv(name=data.name, path=data.path)
+    env = CondaEnv(machine_id=data.machine_id, name=data.name, path=data.path, source="manual")
     db.add(env)
     await db.commit()
     await db.refresh(env)

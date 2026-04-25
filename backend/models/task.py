@@ -24,9 +24,13 @@ class CondaEnv(Base):
     __tablename__ = "conda_env"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    machine_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("machine.id"), nullable=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     path: Mapped[str] = mapped_column(String(512), nullable=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, default="manual")
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class TaskTemplate(Base):
