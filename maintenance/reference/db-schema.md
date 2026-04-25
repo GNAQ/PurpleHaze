@@ -22,7 +22,7 @@ condition.type 取值：`mem`（MB）, `mem_gb`, `util`（%）, `power`（%）, 
 
 ## conda_env
 
-`id`, `name`, `path`（conda 环境目录，空=用 conda run -n name）
+`id`, `machine_id`（nullable；NULL=全局兼容环境）, `name`, `path`（conda 环境目录，空=用 conda run -n name）, `source`（manual / probe）, `last_seen_at`, `created_at`, `updated_at`
 
 ## task_template
 

@@ -70,6 +70,23 @@ HorizontalScrollArea
 - 排序结束后先本地 `arrayMove(...)`，再批量 `PUT /api/machines/{id}` 持久化 `sort_order`
 - 若持久化失败，前端会提示错误并重新 `load()`，回滚到后端真实顺序
 
+## 机器级 Conda 环境入口
+
+机器级 Conda inventory 现在以 `MachineCard` 作为主入口，而不是设置页。每张卡片会单独拉取本机已登记的环境列表，并暴露两类动作：
+
+- `POST /api/machines/{id}/conda-envs/probe`：对当前机器做一次 probe，同步 conda / mamba / micromamba 的环境列表
+- `POST /api/machines/{id}/conda-envs`：手动登记一个环境名和可选路径
+
+这块状态没有上提到全局 store，而是保持在卡片内本地 state：探测和手动登记只影响当前机器卡片，不会触发整个机器页重载。
+
+`TaskCreateModal` / `TaskBatchModal` 的 Conda 下拉框也改成了 machine-aware：
+
+- 未选机器时，只显示 `machine_id = NULL` 的全局兼容环境
+- 选中机器后，走 `/api/tasks/conda-envs?machine_id=...`，显示“该机器环境 + 全局兼容环境”
+- 弹窗里的“探测此机”按钮直接调用机器 probe 端点刷新当前列表，但不承担手动登记职责
+
+设置页仍保留一个“全局 Conda 环境（兼容模式）”卡片，但它只展示 `machine_id = NULL` 的记录，不再是日常管理机器环境的主入口。
+
 ---
 
 ## 任务列表的展示逻辑

@@ -20,7 +20,7 @@ PUT  /pipelines/{id}        更新流水线（name/sort_order）
 DEL  /pipelines/{id}        删除（非空时 400）
 GET  /orphaned              孤立任务列表
 POST /                      创建任务
-POST /batch                 批量创建（body: {commands[], pipeline_id, machine_id, base_config, gpu_condition}）
+POST /batch                 批量创建（body: {commands[], pipeline_ids, machine_id, config, gpu_condition}）
 PUT  /{id}                  更新任务（RUNNING 时 400）
 DEL  /{id}                  删除任务（RUNNING 时 400）
 POST /{id}/cancel           取消任务
@@ -35,7 +35,7 @@ GET  /gpu-presets            抢卡条件预设列表
 POST /gpu-presets            创建预设
 PUT  /gpu-presets/{id}       更新预设
 DEL  /gpu-presets/{id}       删除预设
-GET  /conda-envs             conda 环境列表
+GET  /conda-envs             conda 环境列表（可带 ?machine_id=...，返回该机器环境 + 全局兼容环境）
 POST /conda-envs             创建
 PUT  /conda-envs/{id}        更新
 DEL  /conda-envs/{id}        删除
@@ -46,6 +46,9 @@ DEL  /conda-envs/{id}        删除
 GET  /                  列出所有机器（含连接状态）
 POST /                  注册机器
 GET  /{id}              获取详情
+GET  /{id}/conda-envs   获取该机器已登记的 Conda 环境
+POST /{id}/conda-envs   手动登记该机器的 Conda 环境
+POST /{id}/conda-envs/probe  探测并同步该机器的 Conda 环境列表
 PUT  /{id}              更新配置
 DEL  /{id}              删除机器
 POST /{id}/connect      建立 SSH 连接
