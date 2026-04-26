@@ -36,8 +36,8 @@ POST /gpu-presets            创建预设
 PUT  /gpu-presets/{id}       更新预设
 DEL  /gpu-presets/{id}       删除预设
 GET  /conda-envs             conda 环境列表（可带 ?machine_id=...，返回该机器环境 + 全局兼容环境）
-POST /conda-envs             创建
-PUT  /conda-envs/{id}        更新
+POST /conda-envs             创建（带 machine_id 时按目标机器补齐 fingerprint）
+PUT  /conda-envs/{id}        更新（machine env 会重新检查 fingerprint）
 DEL  /conda-envs/{id}        删除
 ```
 
