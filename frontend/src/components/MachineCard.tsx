@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   Badge, Button, Tooltip, InputNumber,
-  Typography, Space, Dropdown, Modal, message, Divider, Form, Input, Spin,
+  Typography, Space, Dropdown, Modal, message, Divider,
 } from 'antd'
 import {
   ReloadOutlined, DisconnectOutlined, LinkOutlined,
   DeleteOutlined, EditOutlined, EllipsisOutlined,
-  DesktopOutlined, ThunderboltOutlined, PlusOutlined,
+  DesktopOutlined, ThunderboltOutlined,
 } from '@ant-design/icons'
-import type { Machine, MachineCondaEnv } from '../api/machines'
+import type { Machine } from '../api/machines'
 import type { GpuInfo, ResourceSnapshot } from '../api/monitor'
 import { machinesApi } from '../api/machines'
 import { monitorApi } from '../api/monitor'
@@ -232,18 +232,11 @@ function GpuDetail({ gpu }: { gpu: GpuInfo }) {
 export default function MachineCard({ machine, onEdit, onDeleted, onConnectionChange, dragHandleRef, dragListeners }: Props) {
   const { t, isDark } = useTheme()
   const [snapshot, setSnapshot] = useState<ResourceSnapshot | null>(null)
-  const [condaEnvs, setCondaEnvs] = useState<MachineCondaEnv[]>([])
-  const [condaLoading, setCondaLoading] = useState(false)
-  const [probingCondaEnvs, setProbingCondaEnvs] = useState(false)
-  const [registeringCondaEnv, setRegisteringCondaEnv] = useState(false)
-  const [registerModalOpen, setRegisterModalOpen] = useState(false)
-  const [probeWarning, setProbeWarning] = useState<string | null>(null)
   const [connecting, setConnecting] = useState(false)
   const [editingInterval, setEditingInterval] = useState(false)
   const [intervalValue, setIntervalValue] = useState(machine.monitor_config?.interval ?? 10)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const interval = machine.monitor_config?.interval ?? 10
-  const [envForm] = Form.useForm<{ name: string; path?: string }>()
   const connected = machine.is_local || machine.connected
 
   const fetchResources = useCallback(async () => {
@@ -254,27 +247,11 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
     } catch (_) {}
   }, [machine.id, machine.is_local, machine.connected])
 
-  const loadCondaEnvs = useCallback(async () => {
-    setCondaLoading(true)
-    try {
-      const res = await machinesApi.listCondaEnvs(machine.id)
-      setCondaEnvs(res.data)
-    } catch {
-      setCondaEnvs([])
-    } finally {
-      setCondaLoading(false)
-    }
-  }, [machine.id])
-
   useEffect(() => {
     fetchResources()
     intervalRef.current = setInterval(fetchResources, interval * 1000)
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [fetchResources, interval])
-
-  useEffect(() => {
-    void loadCondaEnvs()
-  }, [loadCondaEnvs])
 
   const handleConnect = async () => {
     setConnecting(true)
@@ -310,44 +287,6 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
       message.success('轮询间隔已更新')
     } catch {
       message.error('更新失败')
-    }
-  }
-
-  const handleProbeCondaEnvs = async () => {
-    if (!connected) {
-      message.warning('请先连接机器后再探测 Conda 环境')
-      return
-    }
-    setProbingCondaEnvs(true)
-    try {
-      const res = await machinesApi.probeCondaEnvs(machine.id)
-      setCondaEnvs(res.data.envs)
-      setProbeWarning(res.data.warning ?? null)
-      const { created_count, updated_count, removed_count } = res.data
-      message.success(`Conda 环境已同步：新增 ${created_count}，更新 ${updated_count}，移除 ${removed_count}`)
-    } catch (e: any) {
-      message.error(e.response?.data?.detail ?? '探测失败')
-    } finally {
-      setProbingCondaEnvs(false)
-    }
-  }
-
-  const handleRegisterCondaEnv = async (values: { name: string; path?: string }) => {
-    setRegisteringCondaEnv(true)
-    try {
-      await machinesApi.registerCondaEnv(machine.id, {
-        name: values.name.trim(),
-        path: values.path?.trim() || '',
-      })
-      message.success('已登记 Conda 环境')
-      setRegisterModalOpen(false)
-      envForm.resetFields()
-      setProbeWarning(null)
-      await loadCondaEnvs()
-    } catch (e: any) {
-      message.error(e.response?.data?.detail ?? '登记失败')
-    } finally {
-      setRegisteringCondaEnv(false)
     }
   }
 
@@ -551,144 +490,7 @@ export default function MachineCard({ machine, onEdit, onDeleted, onConnectionCh
           <Text style={{ fontSize: 12, color: t.textTer }}>正在获取资源信息...</Text>
         )}
 
-        <Divider style={{ margin: '12px 0 10px', borderColor: t.divider }}>
-          <Text className="ph-mono" style={{ fontSize: 10, color: ph.purple500, fontWeight: 600, letterSpacing: 1 }}>
-            CONDA ENVS
-          </Text>
-        </Divider>
-
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-          borderRadius: 10,
-          padding: 12,
-          background: isDark
-            ? 'rgba(188,115,173,0.04)'
-            : 'linear-gradient(180deg, rgba(168,64,151,0.06) 0%, rgba(92,193,116,0.04) 100%)',
-          border: isDark ? '1px solid rgba(188,115,173,0.10)' : '1px solid rgba(83,42,86,0.12)',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <Text strong style={{ fontSize: 12, color: t.text }}>已登记 {condaEnvs.length} 个环境</Text>
-              <Text style={{ fontSize: 11, display: 'block', marginTop: 3, color: t.textSec }}>
-                {connected
-                  ? '可以直接探测机器上的 Conda / Mamba / Micromamba 环境。'
-                  : '离线时可查看缓存列表，也可先手动登记环境路径。'}
-              </Text>
-            </div>
-            <Space size={8} wrap>
-              <Button
-                size="small"
-                icon={<ReloadOutlined />}
-                onClick={handleProbeCondaEnvs}
-                loading={probingCondaEnvs}
-                disabled={!connected}
-              >
-                探测
-              </Button>
-              <Button
-                size="small"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  envForm.resetFields()
-                  setRegisterModalOpen(true)
-                }}
-              >
-                手动登记
-              </Button>
-            </Space>
-          </div>
-
-          {probeWarning && (
-            <Text style={{ fontSize: 11, color: ph.warning }}>{probeWarning}</Text>
-          )}
-
-          {condaLoading ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Spin size="small" />
-              <Text style={{ fontSize: 12, color: t.textSec }}>正在加载已登记环境...</Text>
-            </div>
-          ) : condaEnvs.length > 0 ? (
-            <div style={{ display: 'grid', gap: 8 }}>
-              {condaEnvs.slice(0, 4).map((env) => (
-                <div
-                  key={env.id}
-                  style={{
-                    borderRadius: 8,
-                    padding: '9px 10px',
-                    background: isDark ? t.surface2 : 'rgba(255,255,255,0.42)',
-                    border: isDark ? `1px solid ${t.glassBorder}` : '1px solid rgba(83,42,86,0.10)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <Text className="ph-mono" style={{ fontSize: 12, fontWeight: 600, color: t.text }}>
-                        {env.name}
-                      </Text>
-                      <Text className="ph-mono" style={{ fontSize: 11, display: 'block', marginTop: 4, color: t.textSec, wordBreak: 'break-all' }}>
-                        {env.path || `conda activate ${env.name}`}
-                      </Text>
-                    </div>
-                    <span className="ph-mono" style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: 0.4,
-                      color: env.source === 'manual' ? ph.purple400 : ph.green500,
-                      background: env.source === 'manual'
-                        ? 'rgba(188,115,173,0.10)'
-                        : 'rgba(117,193,129,0.10)',
-                      border: env.source === 'manual'
-                        ? '1px solid rgba(188,115,173,0.14)'
-                        : '1px solid rgba(117,193,129,0.14)',
-                      borderRadius: 999,
-                      padding: '3px 7px',
-                      flexShrink: 0,
-                    }}>
-                      {env.source === 'manual' ? 'MANUAL' : 'PROBE'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Text style={{ fontSize: 12, color: t.textTer }}>暂无已登记的 Conda 环境</Text>
-          )}
-
-          {condaEnvs.length > 4 && (
-            <Text style={{ fontSize: 11, color: t.textTer }}>还有 {condaEnvs.length - 4} 个环境未展开显示。</Text>
-          )}
-        </div>
       </div>
-
-      <Modal
-        title={`登记 Conda 环境 · ${machine.name}`}
-        open={registerModalOpen}
-        onCancel={() => {
-          setRegisterModalOpen(false)
-          envForm.resetFields()
-        }}
-        onOk={() => envForm.submit()}
-        confirmLoading={registeringCondaEnv}
-        okText="保存"
-        cancelText="取消"
-      >
-        <Form form={envForm} layout="vertical" onFinish={handleRegisterCondaEnv}>
-          <Form.Item
-            name="name"
-            label="环境名称"
-            rules={[{ required: true, message: '请输入 Conda 环境名称' }]}
-          >
-            <Input placeholder="例如：torch2.4-cu121" />
-          </Form.Item>
-          <Form.Item name="path" label="环境路径">
-            <Input placeholder="例如：/opt/conda/envs/torch2.4-cu121（可选）" allowClear />
-          </Form.Item>
-          <Text style={{ fontSize: 12, color: t.textSec }}>
-            路径留空时，运行任务会按环境名激活；有明确安装目录时建议写入路径。
-          </Text>
-        </Form>
-      </Modal>
     </div>
   )
 }
