@@ -1,12 +1,31 @@
 import client from './client'
 
+const CONDA_PROBE_TIMEOUT_MS = 120000
+
 export interface MachineCondaEnv {
   id: number
   machine_id: number | null
   name: string
   path: string
   source: string
+  python_version: string | null
+  python_path: string | null
+  fingerprint_hash: string | null
+  package_count: number | null
+  fingerprint_info: Record<string, any> | null
   last_seen_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RuntimeEnvBindingHint {
+  id: number
+  machine_id: number
+  conda_env_id: number
+  work_dir_pattern: string
+  source: string
+  priority: number
+  last_used_at: string | null
   created_at: string
   updated_at: string
 }
@@ -18,6 +37,17 @@ export interface MachineCondaEnvProbeResult {
   removed_count: number
   warning?: string | null
   envs: MachineCondaEnv[]
+}
+
+export interface MachineCondaEnvResolveResult {
+  machine_id: number
+  work_dir?: string | null
+  reason?: string | null
+  message?: string | null
+  recommended_env?: MachineCondaEnv | null
+  binding_hint?: RuntimeEnvBindingHint | null
+  conflicts: MachineCondaEnv[]
+  migration_action?: string | null
 }
 
 export interface Machine {
@@ -82,7 +112,13 @@ export const machinesApi = {
   registerCondaEnv: (id: number, data: { name: string; path?: string }) =>
     client.post<MachineCondaEnv>(`/machines/${id}/conda-envs`, data),
   probeCondaEnvs: (id: number) =>
-    client.post<MachineCondaEnvProbeResult>(`/machines/${id}/conda-envs/probe`),
+    client.post<MachineCondaEnvProbeResult>(
+      `/machines/${id}/conda-envs/probe`,
+      undefined,
+      { timeout: CONDA_PROBE_TIMEOUT_MS },
+    ),
+  resolveCondaEnv: (id: number, data: { work_dir?: string | null }) =>
+    client.post<MachineCondaEnvResolveResult>(`/machines/${id}/conda-envs/resolve`, data),
   connect: (id: number) => client.post<ConnectionStatus>(`/machines/${id}/connect`),
   disconnect: (id: number) => client.post<ConnectionStatus>(`/machines/${id}/disconnect`),
   getSnapshot: (id: number) =>

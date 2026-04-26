@@ -9,9 +9,9 @@ import {
 } from 'antd'
 import {
   PlusOutlined, DeleteOutlined, FolderOpenOutlined, ThunderboltOutlined,
-  SaveOutlined, ImportOutlined, ReloadOutlined,
+  SaveOutlined, ImportOutlined,
 } from '@ant-design/icons'
-import { Machine, machinesApi } from '../api/machines'
+import { Machine, MachineCondaEnvResolveResult, machinesApi } from '../api/machines'
 import {
   tasksApi, TaskConfig, GpuCondition, Task, TaskTemplate, CondaEnv, Pipeline,
 } from '../api/tasks'
@@ -180,7 +180,8 @@ export default function TaskCreateModal({
   const [gpuCondition, setGpuCondition] = useState<GpuCondition | null>(null)
   const [condaEnvs, setCondaEnvs] = useState<CondaEnv[]>([])
   const [condaLoading, setCondaLoading] = useState(false)
-  const [probingCondaEnvs, setProbingCondaEnvs] = useState(false)
+  const [resolvingCondaEnv, setResolvingCondaEnv] = useState(false)
+  const [condaRecommendation, setCondaRecommendation] = useState<MachineCondaEnvResolveResult | null>(null)
   const [templates, setTemplates] = useState<TaskTemplate[]>([])
   const [args, setArgs] = useState<{ name: string; value: string }[]>([])
   const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([])
@@ -206,6 +207,7 @@ export default function TaskCreateModal({
   const watchedName = Form.useWatch('name', form)
   const watchedPipelineId = Form.useWatch('pipeline_id', form)
   const watchedCondaEnvId = Form.useWatch('conda_env_id', form)
+  const watchedWorkDir = Form.useWatch('work_dir', form)
 
   useEffect(() => {
     if (open) {
@@ -244,8 +246,14 @@ export default function TaskCreateModal({
       }
       setSelectedTemplateId(null)
       setSaveTemplateName('')
+      setCondaRecommendation(null)
     }
   }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    void resolveRecommendedCondaEnv(selectedMachineId, watchedWorkDir)
+  }, [open, selectedMachineId, watchedWorkDir])
 
   async function loadCondaEnvs(machineId?: number | null) {
     setCondaLoading(true)
@@ -283,30 +291,37 @@ export default function TaskCreateModal({
     }
   }
 
-  async function handleProbeCondaEnvs() {
-    if (!selectedMachineId) {
-      message.warning('请先选择运行机器')
+  async function resolveRecommendedCondaEnv(machineId?: number | null, workDir?: string | null) {
+    if (!machineId) {
+      setCondaRecommendation(null)
       return
     }
-    const machine = machines.find((item) => item.id === selectedMachineId)
-    if (machine && !machine.is_local && !machine.connected) {
-      message.warning(`远程机器 "${machine.name}" 未连接，请先在机器页建立连接`)
-      return
-    }
-    setProbingCondaEnvs(true)
+    setResolvingCondaEnv(true)
     try {
-      const res = await machinesApi.probeCondaEnvs(selectedMachineId)
-      setCondaEnvs(res.data.envs)
+      const res = await machinesApi.resolveCondaEnv(machineId, { work_dir: workDir?.trim() || undefined })
+      setCondaRecommendation(res.data)
       const currentCondaEnvId = form.getFieldValue('conda_env_id')
-      if (currentCondaEnvId && !res.data.envs.some((env) => env.id === currentCondaEnvId)) {
-        form.setFieldValue('conda_env_id', undefined)
+      if (!currentCondaEnvId && res.data.recommended_env) {
+        form.setFieldValue('conda_env_id', res.data.recommended_env.id)
       }
-      message.success(`当前机器环境已刷新：新增 ${res.data.created_count}，更新 ${res.data.updated_count}`)
-    } catch (e: any) {
-      message.error(e.response?.data?.detail ?? '刷新失败')
+    } catch {
+      setCondaRecommendation(null)
     } finally {
-      setProbingCondaEnvs(false)
+      setResolvingCondaEnv(false)
     }
+  }
+
+  function getCondaRecommendationText() {
+    if (!selectedMachineId) return null
+    if (resolvingCondaEnv) return '正在解析当前机器与工作目录的推荐环境...'
+    if (!condaRecommendation?.recommended_env) return null
+    if (condaRecommendation.reason === 'binding_hint' && condaRecommendation.binding_hint) {
+      return `推荐环境：${condaRecommendation.recommended_env.name}，命中目录提示 ${condaRecommendation.binding_hint.work_dir_pattern}`
+    }
+    if (condaRecommendation.reason === 'single_machine_env') {
+      return `推荐环境：${condaRecommendation.recommended_env.name}，当前机器仅登记了这一个环境`
+    }
+    return condaRecommendation.message || null
   }
 
   function loadFromTemplate(tpl: TaskTemplate) {
@@ -691,33 +706,27 @@ export default function TaskCreateModal({
                       children: (
                         <div className="ph-task-modal-tabpane">
                           <Form.Item label="Conda 环境">
-                            <Space.Compact style={{ width: '100%' }}>
-                              <Form.Item name="conda_env_id" noStyle>
-                                <Select
-                                  placeholder="不使用 Conda 环境"
-                                  allowClear
-                                  loading={condaLoading}
-                                  options={condaEnvs.map((e) => ({
-                                    label: `${e.name} (${e.path || `conda activate ${e.name}`})`,
-                                    value: e.id,
-                                  }))}
-                                  style={{ width: '100%' }}
-                                />
-                              </Form.Item>
-                              <Button
-                                icon={<ReloadOutlined />}
-                                loading={probingCondaEnvs}
-                                disabled={!selectedMachineId || (!!selectedMachine && !selectedMachine.is_local && !selectedMachine.connected)}
-                                onClick={() => { void handleProbeCondaEnvs() }}
-                              >
-                                探测此机
-                              </Button>
-                            </Space.Compact>
+                            <Form.Item name="conda_env_id" noStyle>
+                              <Select
+                                placeholder="不使用 Conda 环境"
+                                allowClear
+                                loading={condaLoading}
+                                options={condaEnvs.map((e) => ({
+                                  label: `${e.name} (${e.path || `conda activate ${e.name}`})`,
+                                  value: e.id,
+                                }))}
+                              />
+                            </Form.Item>
                             <Typography.Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
                               {selectedMachineId
-                                ? '优先在机器页维护机器级环境；这里的探测会刷新当前机器的 Conda inventory。'
+                                ? '机器级 Conda inventory 现在统一在设置页按机器维护；这里会直接读取当前机器可用环境。'
                                 : '未选机器时只显示全局兼容环境；选中机器后会补充该机器的 inventory。'}
                             </Typography.Text>
+                            {getCondaRecommendationText() && (
+                              <Typography.Text style={{ fontSize: 12, marginTop: 4, display: 'block', color: ph.green600 }}>
+                                {getCondaRecommendationText()}
+                              </Typography.Text>
+                            )}
                           </Form.Item>
 
                           <div className="ph-task-modal-panel" style={{ padding: 12 }}>

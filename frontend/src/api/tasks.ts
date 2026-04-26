@@ -87,6 +87,11 @@ export interface CondaEnv {
   name: string
   path: string
   source: string
+  python_version: string | null
+  python_path: string | null
+  fingerprint_hash: string | null
+  package_count: number | null
+  fingerprint_info: Record<string, any> | null
   last_seen_at: string | null
   created_at: string
   updated_at: string
