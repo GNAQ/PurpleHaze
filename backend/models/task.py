@@ -28,7 +28,27 @@ class CondaEnv(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     path: Mapped[str] = mapped_column(String(512), nullable=False)
     source: Mapped[str] = mapped_column(String(32), nullable=False, default="manual")
+    python_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    python_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    fingerprint_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    package_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fingerprint_info: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class RuntimeEnvBindingHint(Base):
+    """基于机器与工作目录的环境绑定提示"""
+    __tablename__ = "runtime_env_binding_hint"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    machine_id: Mapped[int] = mapped_column(Integer, ForeignKey("machine.id"), nullable=False)
+    conda_env_id: Mapped[int] = mapped_column(Integer, ForeignKey("conda_env.id"), nullable=False)
+    work_dir_pattern: Mapped[str] = mapped_column(String(1024), nullable=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, default="learned")
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

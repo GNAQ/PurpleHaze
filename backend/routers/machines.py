@@ -13,7 +13,11 @@ from schemas.machine import (
     MachineCreate, MachineUpdate, MachineResponse,
     ConnectionStatus, MachineListResponse,
 )
-from schemas.task import CondaEnvCreate, CondaEnvProbeResponse, CondaEnvResponse
+from schemas.task import (
+    CondaEnvCreate, CondaEnvMigrationPlanResponse, CondaEnvProbeResponse,
+    CondaEnvResolveRequest, CondaEnvResolveResponse, CondaEnvResponse,
+    RuntimeEnvBindingHintResponse,
+)
 from services.ssh_manager import ssh_manager
 from services.resource_monitor import resource_monitor
 from services.runtime_env_service import runtime_env_service
@@ -142,6 +146,61 @@ async def probe_machine_conda_envs(machine_id: int, db: AsyncSession = Depends(g
         removed_count=result.removed_count,
         warning=result.warning,
         envs=[CondaEnvResponse.model_validate(env) for env in result.envs],
+    )
+
+
+@router.post("/{machine_id}/conda-envs/resolve", response_model=CondaEnvResolveResponse)
+async def resolve_machine_conda_env(
+    machine_id: int,
+    data: CondaEnvResolveRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    machine = await db.get(Machine, machine_id)
+    if not machine:
+        raise HTTPException(status_code=404, detail="机器不存在")
+    result = await runtime_env_service.resolve_conda_env(
+        db,
+        machine_id,
+        work_dir=data.work_dir,
+    )
+    return CondaEnvResolveResponse(
+        machine_id=result.machine_id,
+        work_dir=result.work_dir,
+        reason=result.reason,
+        message=result.message,
+        recommended_env=CondaEnvResponse.model_validate(result.recommended_env) if result.recommended_env else None,
+        binding_hint=RuntimeEnvBindingHintResponse.model_validate(result.binding_hint) if result.binding_hint else None,
+        conflicts=[CondaEnvResponse.model_validate(env) for env in result.conflicts],
+        migration_action=result.migration_action,
+    )
+
+
+@router.get("/{machine_id}/conda-envs/migration-plan", response_model=CondaEnvMigrationPlanResponse)
+async def get_machine_conda_env_migration_plan(
+    machine_id: int,
+    source_env_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    machine = await db.get(Machine, machine_id)
+    if not machine:
+        raise HTTPException(status_code=404, detail="机器不存在")
+    try:
+        result = await runtime_env_service.build_migration_plan(
+            db,
+            machine_id,
+            source_env_id=source_env_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return CondaEnvMigrationPlanResponse(
+        target_machine_id=result.target_machine_id,
+        source_env=CondaEnvResponse.model_validate(result.source_env),
+        action=result.action,
+        reason=result.reason,
+        message=result.message,
+        reuse_env=CondaEnvResponse.model_validate(result.reuse_env) if result.reuse_env else None,
+        conflicts=[CondaEnvResponse.model_validate(env) for env in result.conflicts],
     )
 
 

@@ -3,9 +3,12 @@
 """
 from models.auth import User, Setting
 from models.machine import Machine
-from models.task import Pipeline, Task, CondaEnv, TaskTemplate, GpuConditionPreset  # noqa: F401
+from models.task import (  # noqa: F401
+    Pipeline, Task, CondaEnv, RuntimeEnvBindingHint,
+    TaskTemplate, GpuConditionPreset,
+)
 
 __all__ = [
     "User", "Setting", "Machine",
-    "Pipeline", "Task", "CondaEnv", "TaskTemplate", "GpuConditionPreset",
+    "Pipeline", "Task", "CondaEnv", "RuntimeEnvBindingHint", "TaskTemplate", "GpuConditionPreset",
 ]

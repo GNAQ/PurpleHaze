@@ -193,6 +193,11 @@ class CondaEnvResponse(BaseModel):
     name: str
     path: str
     source: str
+    python_version: str | None = None
+    python_path: str | None = None
+    fingerprint_hash: str | None = None
+    package_count: int | None = None
+    fingerprint_info: dict | None = None
     last_seen_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
@@ -209,6 +214,45 @@ class CondaEnvProbeResponse(BaseModel):
     envs: list[CondaEnvResponse]
 
     model_config = {"from_attributes": True}
+
+
+class RuntimeEnvBindingHintResponse(BaseModel):
+    id: int
+    machine_id: int
+    conda_env_id: int
+    work_dir_pattern: str
+    source: str
+    priority: int
+    last_used_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CondaEnvResolveRequest(BaseModel):
+    work_dir: str | None = None
+
+
+class CondaEnvResolveResponse(BaseModel):
+    machine_id: int
+    work_dir: str | None = None
+    reason: str | None = None
+    message: str | None = None
+    recommended_env: CondaEnvResponse | None = None
+    binding_hint: RuntimeEnvBindingHintResponse | None = None
+    conflicts: list[CondaEnvResponse] = []
+    migration_action: str | None = None
+
+
+class CondaEnvMigrationPlanResponse(BaseModel):
+    target_machine_id: int
+    source_env: CondaEnvResponse
+    action: str
+    reason: str
+    message: str | None = None
+    reuse_env: CondaEnvResponse | None = None
+    conflicts: list[CondaEnvResponse] = []
 
 
 # ── 日志 ─────────────────────────────────────────────────────────────────────

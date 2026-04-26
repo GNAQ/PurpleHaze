@@ -4,11 +4,17 @@ Backend API integration tests.
 Tests exercise the real FastAPI app with a test SQLite DB,
 mocked SSH/monitor services, and fake machines.
 """
+import asyncio
+import json
+import os
+
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
+from models.task import CondaEnv
 from services.runtime_env_service import runtime_env_service
+from services.runtime_env_service import _PROBE_SCRIPT
 from tests.conftest import (
     TEST_PASSWORD,
     create_local_machine,
@@ -400,6 +406,35 @@ class TestCondaEnvs:
         # Delete
         resp = await client.delete(f"/api/tasks/conda-envs/{eid}", headers=auth_headers)
         assert resp.status_code == 204
+    
+    async def test_probe_script_limits_to_common_dirs(self, tmp_path):
+        home_dir = tmp_path / "home"
+        common_root = home_dir / "mambaforge"
+        common_env = common_root / "envs" / "torch2"
+        hidden_common_env = home_dir / ".conda" / "envs" / "cache-env"
+        custom_env = home_dir / "custom" / "envs" / "custom-env"
+
+        common_env.mkdir(parents=True)
+        hidden_common_env.mkdir(parents=True)
+        custom_env.mkdir(parents=True)
+
+        proc = await asyncio.create_subprocess_exec(
+            "bash",
+            "-lc",
+            _PROBE_SCRIPT,
+            env={**os.environ, "HOME": str(home_dir)},
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+
+        assert proc.returncode == 0, stderr.decode("utf-8", errors="replace")
+        payload = json.loads(stdout.decode("utf-8", errors="replace"))
+        assert str(common_root) in payload["envs"]
+        assert str(common_env) in payload["envs"]
+        assert str(hidden_common_env) in payload["envs"]
+        assert str(custom_env) not in payload["envs"]
+        assert "自定义路径请在设置页手动登记到对应机器" in payload["probe_warning"]
 
     async def test_machine_scoped_probe_and_register(self, client, auth_headers, monkeypatch):
         machine_resp = await client.post(
@@ -415,6 +450,23 @@ class TestCondaEnvs:
 
         monkeypatch.setattr(runtime_env_service, "_run_local_probe", fake_local_probe)
 
+        async def fake_inspect(machine, path):
+            env_name = "base" if path == "/opt/conda" else "torch2"
+            version = "3.10.12" if env_name == "base" else "3.10.13"
+            return {
+                "python_version": version,
+                "python_path": f"{path}/bin/python",
+                "fingerprint_hash": f"fp-{env_name}",
+                "package_count": 123 if env_name == "base" else 80,
+                "key_packages": {
+                    "python": version,
+                    **({"torch": "2.4.0"} if env_name == "torch2" else {}),
+                },
+                "status": "ready",
+            }
+
+        monkeypatch.setattr(runtime_env_service, "_inspect_conda_env", fake_inspect)
+
         resp = await client.post(
             f"/api/machines/{machine_id}/conda-envs/probe",
             headers=auth_headers,
@@ -426,6 +478,11 @@ class TestCondaEnvs:
         assert {env["name"] for env in data["envs"]} == {"base", "torch2"}
         assert all(env["machine_id"] == machine_id for env in data["envs"])
         assert all(env["source"] == "probe" for env in data["envs"])
+        base_env = next(env for env in data["envs"] if env["name"] == "base")
+        assert base_env["fingerprint_hash"] == "fp-base"
+        assert base_env["python_version"] == "3.10.12"
+        assert base_env["fingerprint_info"]["package_count"] == 123
+        assert base_env["fingerprint_info"]["key_packages"]["python"] == "3.10.12"
 
         register_resp = await client.post(
             f"/api/machines/{machine_id}/conda-envs",
@@ -459,6 +516,197 @@ class TestCondaEnvs:
         assert data["removed_count"] == 1
         names = {env["name"] for env in data["envs"]}
         assert names == {"base", "manual-env", "manual-name-only"}
+
+    async def test_resolve_conda_env_recommendation_from_binding_hint(
+        self,
+        client,
+        auth_headers,
+        monkeypatch,
+    ):
+        machine_resp = await client.post(
+            "/api/machines",
+            json={"name": "HintMachine", "is_local": True},
+            headers=auth_headers,
+        )
+        assert machine_resp.status_code == 201
+        machine_id = machine_resp.json()["id"]
+
+        async def fake_local_probe():
+            return '{"envs": ["/opt/conda/envs/torch2"]}', ""
+
+        monkeypatch.setattr(runtime_env_service, "_run_local_probe", fake_local_probe)
+
+        async def fake_inspect(machine, path):
+            return {
+                "python_version": "3.10.12",
+                "python_path": f"{path}/bin/python",
+                "fingerprint_hash": "fp-torch2",
+                "package_count": 80,
+                "key_packages": {"python": "3.10.12", "torch": "2.4.0"},
+                "status": "ready",
+            }
+
+        monkeypatch.setattr(runtime_env_service, "_inspect_conda_env", fake_inspect)
+
+        probe_resp = await client.post(
+            f"/api/machines/{machine_id}/conda-envs/probe",
+            headers=auth_headers,
+        )
+        assert probe_resp.status_code == 200
+        env_id = probe_resp.json()["envs"][0]["id"]
+
+        create_task_resp = await client.post(
+            "/api/tasks",
+            json={
+                "name": "hint-task",
+                "machine_id": machine_id,
+                "config": {
+                    "command": "python train.py",
+                    "work_dir": "/workspace/project-a",
+                    "conda_env_id": env_id,
+                    "env_vars": {},
+                    "args": [],
+                },
+            },
+            headers=auth_headers,
+        )
+        assert create_task_resp.status_code == 200
+
+        resolve_resp = await client.post(
+            f"/api/machines/{machine_id}/conda-envs/resolve",
+            json={"work_dir": "/workspace/project-a/src"},
+            headers=auth_headers,
+        )
+        assert resolve_resp.status_code == 200
+        data = resolve_resp.json()
+        assert data["recommended_env"]["id"] == env_id
+        assert data["reason"] == "binding_hint"
+        assert data["binding_hint"]["work_dir_pattern"] == "/workspace/project-a"
+
+    async def test_migration_plan_detects_same_name_different_fingerprint(
+        self,
+        client,
+        auth_headers,
+        override_db,
+    ):
+        source_machine = await client.post(
+            "/api/machines",
+            json={"name": "Source", "is_local": True},
+            headers=auth_headers,
+        )
+        target_machine = await client.post(
+            "/api/machines",
+            json={"name": "Target", "is_local": True},
+            headers=auth_headers,
+        )
+        assert source_machine.status_code == 201
+        assert target_machine.status_code == 201
+        source_machine_id = source_machine.json()["id"]
+        target_machine_id = target_machine.json()["id"]
+
+        source_env_resp = await client.post(
+            f"/api/machines/{source_machine_id}/conda-envs",
+            json={"name": "torch2", "path": "/opt/conda/envs/torch2"},
+            headers=auth_headers,
+        )
+        target_env_resp = await client.post(
+            f"/api/machines/{target_machine_id}/conda-envs",
+            json={"name": "torch2", "path": "/srv/conda/envs/torch2"},
+            headers=auth_headers,
+        )
+        assert source_env_resp.status_code == 201
+        assert target_env_resp.status_code == 201
+        source_env_id = source_env_resp.json()["id"]
+        target_env_id = target_env_resp.json()["id"]
+
+        async with override_db() as db:
+            source_env = await db.get(CondaEnv, source_env_id)
+            target_env = await db.get(CondaEnv, target_env_id)
+            source_env.fingerprint_hash = "fp-source"
+            source_env.fingerprint_info = {
+                "status": "ready",
+                "package_count": 80,
+                "key_packages": {"python": "3.10.12", "torch": "2.4.0"},
+            }
+            target_env.fingerprint_hash = "fp-target"
+            target_env.fingerprint_info = {
+                "status": "ready",
+                "package_count": 82,
+                "key_packages": {"python": "3.10.12", "torch": "2.5.1"},
+            }
+            await db.commit()
+
+        resp = await client.get(
+            f"/api/machines/{target_machine_id}/conda-envs/migration-plan",
+            params={"source_env_id": source_env_id},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["action"] == "name_conflict"
+        assert data["reason"] == "same_name_different_fingerprint"
+        assert data["source_env"]["id"] == source_env_id
+        assert data["conflicts"][0]["id"] == target_env_id
+
+    async def test_generic_conda_crud_keeps_machine_fingerprint_in_sync(
+        self,
+        client,
+        auth_headers,
+        monkeypatch,
+    ):
+        machine_resp = await client.post(
+            "/api/machines",
+            json={"name": "CrudMachine", "is_local": True},
+            headers=auth_headers,
+        )
+        assert machine_resp.status_code == 201
+        machine_id = machine_resp.json()["id"]
+
+        async def fake_inspect(machine, path):
+            env_name = path.rstrip("/").split("/")[-1]
+            version = "3.10.12" if env_name == "env-a" else "3.11.9"
+            return {
+                "python_version": version,
+                "python_path": f"{path}/bin/python",
+                "fingerprint_hash": f"fp-{env_name}",
+                "package_count": 80 if env_name == "env-a" else 96,
+                "key_packages": {"python": version},
+                "status": "ready",
+            }
+
+        monkeypatch.setattr(runtime_env_service, "_inspect_conda_env", fake_inspect)
+
+        create_resp = await client.post(
+            "/api/tasks/conda-envs",
+            json={
+                "name": "env-a",
+                "path": "/opt/conda/envs/env-a",
+                "machine_id": machine_id,
+            },
+            headers=auth_headers,
+        )
+        assert create_resp.status_code == 200
+        created_env = create_resp.json()
+        assert created_env["machine_id"] == machine_id
+        assert created_env["fingerprint_hash"] == "fp-env-a"
+        assert created_env["python_version"] == "3.10.12"
+        assert created_env["source"] == "manual"
+
+        update_resp = await client.put(
+            f"/api/tasks/conda-envs/{created_env['id']}",
+            json={
+                "name": "env-b",
+                "path": "/opt/conda/envs/env-b",
+            },
+            headers=auth_headers,
+        )
+        assert update_resp.status_code == 200
+        updated_env = update_resp.json()
+        assert updated_env["name"] == "env-b"
+        assert updated_env["path"] == "/opt/conda/envs/env-b"
+        assert updated_env["fingerprint_hash"] == "fp-env-b"
+        assert updated_env["python_version"] == "3.11.9"
+        assert updated_env["fingerprint_info"]["package_count"] == 96
 
     async def test_task_rejects_conda_env_from_other_machine(self, client, auth_headers):
         source_machine = await client.post(

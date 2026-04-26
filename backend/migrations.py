@@ -65,6 +65,36 @@ async def _m5_add_machine_scoped_conda_env_fields(db: AsyncSession) -> None:
     await db.execute(text("UPDATE conda_env SET updated_at = COALESCE(updated_at, created_at, datetime('now'))"))
 
 
+async def _m6_add_runtime_env_fingerprint_and_binding_hint(db: AsyncSession) -> None:
+    cols = [
+        ("python_version", "VARCHAR(64)"),
+        ("python_path", "VARCHAR(512)"),
+        ("fingerprint_hash", "VARCHAR(128)"),
+        ("package_count", "INTEGER"),
+        ("fingerprint_info", "JSON"),
+    ]
+    for col, definition in cols:
+        await _add_column_if_missing(db, "conda_env", col, definition)
+
+    await db.execute(text("""
+        CREATE TABLE IF NOT EXISTS runtime_env_binding_hint (
+            id INTEGER NOT NULL PRIMARY KEY,
+            machine_id INTEGER NOT NULL REFERENCES machine(id),
+            conda_env_id INTEGER NOT NULL REFERENCES conda_env(id),
+            work_dir_pattern VARCHAR(1024) NOT NULL,
+            source VARCHAR(32) NOT NULL DEFAULT 'learned',
+            priority INTEGER NOT NULL DEFAULT 100,
+            last_used_at DATETIME,
+            created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+            updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
+        )
+    """))
+    await db.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_env_binding_hint_machine_pattern "
+        "ON runtime_env_binding_hint(machine_id, work_dir_pattern)"
+    ))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 迁移列表：(version: int, description: str, sql_or_callable: str | Callable | None)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -75,6 +105,7 @@ MIGRATIONS: list[tuple[int, str, "str | Callable | None"]] = [
     (4, "task 表增加 rendered_command 字段",
      lambda db: _add_column_if_missing(db, "task", "rendered_command", "TEXT")),
     (5, "conda_env 表增加 machine-scoped inventory 字段", _m5_add_machine_scoped_conda_env_fields),
+    (6, "conda_env 表增加 fingerprint 字段并新增 runtime_env_binding_hint 表", _m6_add_runtime_env_fingerprint_and_binding_hint),
 ]
 
 

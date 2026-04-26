@@ -2,6 +2,7 @@
 任务管理路由
 """
 import os
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,6 +27,7 @@ from schemas.task import (
     CondaEnvCreate, CondaEnvUpdate, CondaEnvResponse,
     TaskLogsResponse, HistoryTaskResponse,
 )
+from services.runtime_env_service import runtime_env_service
 from services.task_scheduler import task_scheduler
 
 router = APIRouter(
@@ -156,6 +158,12 @@ async def create_task(data: TaskCreate, db: AsyncSession = Depends(get_db)):
     db.add(task)
     await db.commit()
     await db.refresh(task)
+    await runtime_env_service.learn_binding_hint(
+        db,
+        data.machine_id,
+        (config_data or {}).get("work_dir"),
+        (config_data or {}).get("conda_env_id"),
+    )
     return TaskBrief.model_validate(task)
 
 
@@ -223,6 +231,13 @@ async def create_batch_tasks(data: BatchTaskCreate, db: AsyncSession = Depends(g
     for task in created_tasks:
         await db.refresh(task)
 
+    await runtime_env_service.learn_binding_hint(
+        db,
+        data.machine_id,
+        base_config.get("work_dir"),
+        base_config.get("conda_env_id"),
+    )
+
     return BatchTaskCreateResponse(
         created_count=len(created_tasks),
         tasks=[TaskBrief.model_validate(t) for t in created_tasks],
@@ -257,6 +272,12 @@ async def update_task(task_id: int, data: TaskUpdate, db: AsyncSession = Depends
         task.sort_order = data.sort_order
     await db.commit()
     await db.refresh(task)
+    await runtime_env_service.learn_binding_hint(
+        db,
+        task.machine_id,
+        (task.config or {}).get("work_dir"),
+        (task.config or {}).get("conda_env_id"),
+    )
     return TaskBrief.model_validate(task)
 
 
@@ -370,6 +391,13 @@ async def create_template(data: TemplateCreate, db: AsyncSession = Depends(get_d
     db.add(tpl)
     await db.commit()
     await db.refresh(tpl)
+    await runtime_env_service.learn_binding_hint(
+        db,
+        tpl.machine_id,
+        (tpl.config or {}).get("work_dir"),
+        (tpl.config or {}).get("conda_env_id"),
+        source="template",
+    )
     return TemplateResponse.model_validate(tpl)
 
 
@@ -392,6 +420,13 @@ async def update_template(tpl_id: int, data: TemplateUpdate, db: AsyncSession = 
         tpl.gpu_condition = data.gpu_condition
     await db.commit()
     await db.refresh(tpl)
+    await runtime_env_service.learn_binding_hint(
+        db,
+        tpl.machine_id,
+        (tpl.config or {}).get("work_dir"),
+        (tpl.config or {}).get("conda_env_id"),
+        source="template",
+    )
     return TemplateResponse.model_validate(tpl)
 
 
@@ -464,7 +499,19 @@ async def list_conda_envs(machine_id: int | None = None, db: AsyncSession = Depe
 
 @router.post("/conda-envs", response_model=CondaEnvResponse)
 async def create_conda_env(data: CondaEnvCreate, db: AsyncSession = Depends(get_db)):
-    env = CondaEnv(machine_id=data.machine_id, name=data.name, path=data.path, source="manual")
+    if data.machine_id is not None:
+        machine = await db.get(Machine, data.machine_id)
+        if not machine:
+            raise HTTPException(status_code=404, detail="机器不存在")
+        env = await runtime_env_service.register_conda_env(
+            db,
+            machine,
+            name=data.name,
+            path=data.path,
+        )
+        return CondaEnvResponse.model_validate(env)
+
+    env = CondaEnv(machine_id=None, name=data.name, path=data.path, source="manual")
     db.add(env)
     await db.commit()
     await db.refresh(env)
@@ -478,10 +525,24 @@ async def update_conda_env(
     env = await db.get(CondaEnv, env_id)
     if not env:
         raise HTTPException(status_code=404, detail="环境不存在")
+
+    now = datetime.utcnow()
     if data.name is not None:
         env.name = data.name
     if data.path is not None:
         env.path = data.path
+
+    if env.machine_id is not None:
+        machine = await db.get(Machine, env.machine_id)
+        if not machine:
+            raise HTTPException(status_code=404, detail="环境所属机器不存在")
+        runtime_env_service._apply_fingerprint_payload(
+            env,
+            await runtime_env_service._call_inspect_conda_env(machine, env.path),
+        )
+        env.source = "manual"
+        env.updated_at = now
+
     await db.commit()
     await db.refresh(env)
     return CondaEnvResponse.model_validate(env)
